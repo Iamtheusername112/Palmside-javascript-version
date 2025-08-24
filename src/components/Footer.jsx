@@ -3,7 +3,7 @@ import { Building2, Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin 
 export default function Footer() {
   return (
     <footer className="bg-gray-900 text-white">
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
@@ -35,23 +35,23 @@ export default function Footer() {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Quick Links</h3>
             <ul className="space-y-2">
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Buy Property</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Rent Property</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Sell Property</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Find Agents</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Mortgage Calculator</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Home</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">About Us</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Services</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Properties</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Contact Us</a></li>
             </ul>
           </div>
 
           {/* Services */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Services</h3>
+            <h3 className="text-lg font-semibold">Our Services</h3>
             <ul className="space-y-2">
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Property Search</a></li>
               <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Property Management</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Expert Agents</a></li>
               <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Market Analysis</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Legal Services</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Home Insurance</a></li>
-              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Investment Advisory</a></li>
+              <li><a href="#" className="text-gray-300 hover:text-white transition-colors">Mortgage Calculator</a></li>
             </ul>
           </div>
 
