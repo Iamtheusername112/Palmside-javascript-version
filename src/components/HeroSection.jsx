@@ -1,5 +1,6 @@
 import { Play, ArrowRight } from 'lucide-react'
 import { Button } from './ui/button'
+import Link from 'next/link'
 
 export default function HeroSection() {
   return (
@@ -35,15 +36,19 @@ export default function HeroSection() {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-4">
-            <Play className="h-5 w-5 mr-2" />
-            Explore Properties
-          </Button>
+          <Link href="/properties">
+            <Button size="lg" className="bg-primary hover:bg-primary/90 text-lg px-8 py-4">
+              <Play className="h-5 w-5 mr-2" />
+              Explore Properties
+            </Button>
+          </Link>
           
-          <Button variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-gray-900 text-lg px-8 py-4">
-            Learn More
-            <ArrowRight className="h-5 w-5 ml-2" />
-          </Button>
+          <Link href="/about">
+            <Button variant="outline" size="lg" className="border-white text-white hover:bg-white hover:text-gray-900 text-lg px-8 py-4">
+              Learn More
+              <ArrowRight className="h-5 w-5 ml-2" />
+            </Button>
+          </Link>
         </div>
 
         {/* Stats */}

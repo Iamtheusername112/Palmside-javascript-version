@@ -2,6 +2,7 @@ import { Heart, MapPin, Bed, Bath, Square, Star } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader } from './ui/card'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
+import Link from 'next/link'
 
 export default function PropertyCard({ property }) {
   const {
@@ -90,9 +91,11 @@ export default function PropertyCard({ property }) {
       </CardContent>
       
       <CardFooter className="p-4 pt-0">
-        <Button className="w-full">
-          View Details
-        </Button>
+        <Link href={`/properties/${id}`} className="w-full">
+          <Button className="w-full">
+            View Details
+          </Button>
+        </Link>
       </CardFooter>
     </Card>
   )
