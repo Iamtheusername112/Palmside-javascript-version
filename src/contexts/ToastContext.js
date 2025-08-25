@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useCallback } from 'react'
-import { ToastProviderPrimitive } from '@/components/ui/toast'
+import { ToastProvider as RadixToastProvider } from '@/components/ui/toast'
 
 const ToastContext = createContext()
 
@@ -58,9 +58,9 @@ export function ToastProvider({ children }) {
   }
 
   return (
-    <ToastProviderPrimitive>
+    <RadixToastProvider>
       <ToastContext.Provider value={value}>{children}</ToastContext.Provider>
-    </ToastProviderPrimitive>
+    </RadixToastProvider>
   )
 }
 

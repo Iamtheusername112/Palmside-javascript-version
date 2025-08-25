@@ -95,7 +95,7 @@ const ToastDescription = React.forwardRef(({ className, ...props }, ref) => (
 ToastDescription.displayName = ToastPrimitives.Description.displayName
 
 export {
-  ToastProvider as ToastProviderPrimitive,
+  ToastProvider,
   ToastViewport,
   Toast,
   ToastTitle,

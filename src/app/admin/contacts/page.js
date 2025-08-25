@@ -56,6 +56,11 @@ export default function AdminContactsPage() {
     total: 0,
     totalPages: 0,
   })
+  const [notifications, setNotifications] = useState({
+    new: 0,
+    recent: 0,
+    weekly: 0,
+  })
 
   useEffect(() => {
     fetchContacts()
@@ -156,6 +161,57 @@ export default function AdminContactsPage() {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }))
   }
 
+  const markContactAsRead = async (contactId) => {
+    try {
+      const response = await fetch('/api/admin/contacts', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id: contactId, status: 'read' }),
+      })
+
+      if (response.ok) {
+        // Update local state
+        setContacts((prev) =>
+          prev.map((contact) =>
+            contact.id === contactId ? { ...contact, status: 'read' } : contact
+          )
+        )
+
+        // Update selected contact if it's the one being viewed
+        if (selectedContact && selectedContact.id === contactId) {
+          setSelectedContact((prev) => ({ ...prev, status: 'read' }))
+        }
+
+        // Update notification count
+        setNotifications((prev) => ({
+          ...prev,
+          new: Math.max(0, prev.new - 1),
+        }))
+      }
+    } catch (error) {
+      console.error('Error marking contact as read:', error)
+    }
+  }
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch('/api/admin/contacts/notifications')
+      const data = await response.json()
+
+      if (response.ok) {
+        setNotifications(data)
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchNotifications()
+  }, [])
+
   return (
     <div className='p-6 space-y-6'>
       {/* Header */}
@@ -169,6 +225,17 @@ export default function AdminContactsPage() {
           </p>
         </div>
         <div className='flex items-center space-x-4'>
+          {notifications.new > 0 && (
+            <Badge variant='destructive' className='text-sm'>
+              {notifications.new} New
+            </Badge>
+          )}
+          {notifications.recent > 0 &&
+            notifications.recent !== notifications.new && (
+              <Badge variant='secondary' className='text-sm'>
+                +{notifications.recent} Recent
+              </Badge>
+            )}
           <Badge variant='outline' className='text-sm'>
             Total: {pagination.total}
           </Badge>
@@ -281,6 +348,10 @@ export default function AdminContactsPage() {
                         onClick={() => {
                           setSelectedContact(contact)
                           setShowDetails(true)
+                          // Mark as read if it's a new contact
+                          if (contact.status === 'new') {
+                            markContactAsRead(contact.id)
+                          }
                         }}
                       >
                         <Eye className='h-4 w-4 mr-1' />

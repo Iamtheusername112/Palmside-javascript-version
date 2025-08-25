@@ -11,12 +11,11 @@ import { Switch } from '@/components/ui/switch'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/contexts/ToastContext'
-import { use } from 'react'
 
 export default function EditPropertyPage({ params }) {
   const router = useRouter()
   const { success, error: showError } = useToast()
-  const { id } = use(params)
+  const { id } = params
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)

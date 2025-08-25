@@ -9,11 +9,12 @@ import {
   Plus,
   Eye,
   RefreshCw,
+  Contact,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useAdminStats } from '@/hooks/useAdminStats'
 import { useToast } from '@/contexts/ToastContext'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function AdminDashboard() {
   const {
@@ -23,6 +24,11 @@ export default function AdminDashboard() {
     refreshStats,
   } = useAdminStats()
   const { success, error: showError } = useToast()
+  const [contactNotifications, setContactNotifications] = useState({
+    new: 0,
+    recent: 0,
+    weekly: 0,
+  })
 
   // Add effect to show success toast when dashboard loads
   useEffect(() => {
@@ -33,6 +39,28 @@ export default function AdminDashboard() {
       )
     }
   }, [loading, dashboardStats, success])
+
+  const fetchContactNotifications = async () => {
+    try {
+      const response = await fetch('/api/admin/contacts/notifications')
+      const data = await response.json()
+
+      if (response.ok) {
+        setContactNotifications(data)
+      }
+    } catch (error) {
+      console.error('Error fetching contact notifications:', error)
+    }
+  }
+
+  useEffect(() => {
+    fetchContactNotifications()
+
+    // Refresh notifications every 5 minutes
+    const interval = setInterval(fetchContactNotifications, 5 * 60 * 1000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   const handleRefresh = async () => {
     try {
@@ -82,6 +110,16 @@ export default function AdminDashboard() {
       changeType: dashboardStats?.stats?.totalViews?.changeType || 'positive',
       icon: Eye,
     },
+    {
+      title: 'New Contacts',
+      value: contactNotifications.new.toString(),
+      change:
+        contactNotifications.recent > 0
+          ? `+${contactNotifications.recent} recent`
+          : 'No recent',
+      changeType: contactNotifications.new > 0 ? 'positive' : 'neutral',
+      icon: Contact,
+    },
   ]
 
   const recentActivities = dashboardStats?.recentActivities || []
@@ -127,7 +165,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Stats Grid */}
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
+      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 lg:gap-6'>
         {stats.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
@@ -178,6 +216,17 @@ export default function AdminDashboard() {
               <Button variant='outline' className='w-full justify-start'>
                 <Users className='w-4 h-4 mr-2' />
                 View Users
+              </Button>
+            </Link>
+            <Link href='/admin/contacts'>
+              <Button variant='outline' className='w-full justify-start'>
+                <Contact className='w-4 h-4 mr-2' />
+                View Contacts
+                {contactNotifications.new > 0 && (
+                  <span className='ml-auto inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full'>
+                    {contactNotifications.new}
+                  </span>
+                )}
               </Button>
             </Link>
             <Link href='/admin/analytics'>

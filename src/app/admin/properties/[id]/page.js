@@ -21,13 +21,13 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { PropertyActions } from '@/components/admin/PropertyActions'
-import { use } from 'react'
+
 import { useToast } from '@/contexts/ToastContext'
 
 export default function PropertyViewPage({ params }) {
   const router = useRouter()
   const { success, error: showError } = useToast()
-  const { id } = use(params)
+  const { id } = params
   const [property, setProperty] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
