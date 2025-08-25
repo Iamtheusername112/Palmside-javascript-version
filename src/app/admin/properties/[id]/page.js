@@ -21,10 +21,11 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { PropertyActions } from '@/components/admin/PropertyActions'
+import { use } from 'react'
 
 export default function PropertyViewPage({ params }) {
   const router = useRouter()
-  const { id } = params
+  const { id } = use(params)
   const [property, setProperty] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
