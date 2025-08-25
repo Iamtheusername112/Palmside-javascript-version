@@ -10,9 +10,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { ArrowLeft, Save, Upload } from 'lucide-react'
 import Link from 'next/link'
+import { useToast } from '@/hooks/useToast'
 
 export default function NewPropertyPage() {
   const router = useRouter()
+  const { success, error: showError } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
@@ -54,16 +56,74 @@ export default function NewPropertyPage() {
     setIsSubmitting(true)
 
     try {
-      // TODO: Implement API call to create property
-      console.log('Creating property:', formData)
+      // Validate required fields
+      const requiredFields = [
+        'title',
+        'location',
+        'price',
+        'type',
+        'status',
+        'bedrooms',
+        'bathrooms',
+        'sqft',
+      ]
+      const missingFields = requiredFields.filter((field) => !formData[field])
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`)
+      }
 
-      // Redirect to properties list
-      router.push('/admin/properties')
+      // Validate numeric fields
+      if (isNaN(formData.price) || parseFloat(formData.price) <= 0) {
+        throw new Error('Price must be a positive number')
+      }
+      if (isNaN(formData.bedrooms) || parseInt(formData.bedrooms) < 0) {
+        throw new Error('Bedrooms must be a non-negative number')
+      }
+      if (isNaN(formData.bathrooms) || parseFloat(formData.bathrooms) < 0) {
+        throw new Error('Bathrooms must be a non-negative number')
+      }
+      if (isNaN(formData.sqft) || parseInt(formData.sqft) <= 0) {
+        throw new Error('Square feet must be a positive number')
+      }
+
+      const response = await fetch('/api/properties', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          price: parseFloat(formData.price),
+          bedrooms: parseInt(formData.bedrooms),
+          bathrooms: parseFloat(formData.bathrooms),
+          sqft: parseInt(formData.sqft),
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create property')
+      }
+
+      const newProperty = await response.json()
+
+      // Show success toast
+      success(
+        'Property Created Successfully!',
+        `${formData.title} has been added to your portfolio.`
+      )
+
+      // Redirect to properties list after a short delay
+      setTimeout(() => {
+        router.push('/admin/properties')
+      }, 1500)
     } catch (error) {
       console.error('Error creating property:', error)
+      showError(
+        'Failed to Create Property',
+        error.message || 'An unexpected error occurred. Please try again.'
+      )
     } finally {
       setIsSubmitting(false)
     }

@@ -1,72 +1,79 @@
+'use client'
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Building2,
   Users,
-  DollarSign,
   TrendingUp,
   Plus,
   Eye,
-  MessageSquare,
+  RefreshCw,
 } from 'lucide-react'
 import Link from 'next/link'
+import { useAdminStats } from '@/hooks/useAdminStats'
+import { useToast } from '@/hooks/useToast'
 
 export default function AdminDashboard() {
-  // Mock data - replace with real data from database
+  const {
+    stats: dashboardStats,
+    loading,
+    error,
+    refreshStats,
+  } = useAdminStats()
+  const { success, error: showError } = useToast()
+
+  const handleRefresh = async () => {
+    try {
+      await refreshStats()
+      success(
+        'Dashboard Refreshed',
+        'Dashboard data has been updated successfully.'
+      )
+    } catch (error) {
+      showError(
+        'Refresh Failed',
+        'Failed to refresh dashboard data. Please try again.'
+      )
+    }
+  }
+
+  // Default stats structure
   const stats = [
     {
       title: 'Total Properties',
-      value: '24',
-      change: '+12%',
-      changeType: 'positive',
+      value: dashboardStats?.stats?.totalProperties?.value || '0',
+      change: dashboardStats?.stats?.totalProperties?.change || '+0%',
+      changeType:
+        dashboardStats?.stats?.totalProperties?.changeType || 'positive',
       icon: Building2,
     },
     {
-      title: 'Active Users',
-      value: '1,234',
-      change: '+8%',
-      changeType: 'positive',
+      title: 'Active Properties',
+      value: dashboardStats?.stats?.activeProperties?.value || '0',
+      change: dashboardStats?.stats?.activeProperties?.change || '+0%',
+      changeType:
+        dashboardStats?.stats?.activeProperties?.changeType || 'positive',
       icon: Users,
     },
     {
-      title: 'Monthly Revenue',
-      value: '$45,678',
-      change: '+23%',
-      changeType: 'positive',
-      icon: DollarSign,
+      title: 'Featured Properties',
+      value: dashboardStats?.stats?.featuredProperties?.value || '0',
+      change: dashboardStats?.stats?.featuredProperties?.change || '+0%',
+      changeType:
+        dashboardStats?.stats?.featuredProperties?.changeType || 'positive',
+      icon: TrendingUp,
     },
     {
-      title: 'Property Views',
-      value: '8,901',
-      change: '+15%',
-      changeType: 'positive',
+      title: 'Total Views',
+      value: dashboardStats?.stats?.totalViews?.value || '0',
+      change: dashboardStats?.stats?.totalViews?.change || '+0%',
+      changeType: dashboardStats?.stats?.totalViews?.changeType || 'positive',
       icon: Eye,
     },
   ]
 
-  const recentActivities = [
-    {
-      id: 1,
-      action: 'New property added',
-      property: 'Modern Downtown Apartment',
-      time: '2 hours ago',
-      admin: 'John Doe',
-    },
-    {
-      id: 2,
-      action: 'Property status updated',
-      property: 'Luxury Family Home',
-      time: '4 hours ago',
-      admin: 'Jane Smith',
-    },
-    {
-      id: 3,
-      action: 'New user registered',
-      property: 'N/A',
-      time: '6 hours ago',
-      admin: 'System',
-    },
-  ]
+  const recentActivities = dashboardStats?.recentActivities || []
 
   return (
     <div className='space-y-6'>
@@ -79,6 +86,12 @@ export default function AdminDashboard() {
           </p>
         </div>
         <div className='flex space-x-3'>
+          <Button variant='outline' onClick={handleRefresh} disabled={loading}>
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`}
+            />
+            Refresh
+          </Button>
           <Link href='/admin/properties/new'>
             <Button>
               <Plus className='w-4 h-4 mr-2' />
@@ -87,6 +100,20 @@ export default function AdminDashboard() {
           </Link>
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <Card className='border-red-200 bg-red-50'>
+          <CardContent className='pt-6'>
+            <div className='flex items-center space-x-2 text-red-800'>
+              <span className='text-sm font-medium'>Error: {error}</span>
+              <Button variant='ghost' size='sm' onClick={refreshStats}>
+                <RefreshCw className='w-4 h-4' />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Grid */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
@@ -100,7 +127,7 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className='text-2xl font-bold text-gray-900'>
-                {stat.value}
+                {loading ? '...' : stat.value}
               </div>
               <p
                 className={`text-xs ${
@@ -109,7 +136,7 @@ export default function AdminDashboard() {
                     : 'text-red-600'
                 }`}
               >
-                {stat.change} from last month
+                {loading ? '...' : stat.change} from last month
               </p>
             </CardContent>
           </Card>
@@ -157,24 +184,46 @@ export default function AdminDashboard() {
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className='space-y-4'>
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className='flex items-start space-x-3'>
-                  <div className='w-2 h-2 bg-primary rounded-full mt-2'></div>
-                  <div className='flex-1'>
-                    <p className='text-sm font-medium text-gray-900'>
-                      {activity.action}
-                    </p>
-                    <p className='text-sm text-gray-600'>
-                      {activity.property !== 'N/A' ? activity.property : ''}
-                    </p>
-                    <p className='text-xs text-gray-500'>
-                      {activity.time} by {activity.admin}
-                    </p>
+            {loading ? (
+              <div className='space-y-4'>
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className='flex items-start space-x-3 animate-pulse'
+                  >
+                    <div className='w-2 h-2 bg-gray-300 rounded-full mt-2'></div>
+                    <div className='flex-1 space-y-2'>
+                      <div className='h-4 bg-gray-300 rounded w-3/4'></div>
+                      <div className='h-3 bg-gray-300 rounded w-1/2'></div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : recentActivities.length > 0 ? (
+              <div className='space-y-4'>
+                {recentActivities.map((activity) => (
+                  <div key={activity.id} className='flex items-start space-x-3'>
+                    <div className='w-2 h-2 bg-primary rounded-full mt-2'></div>
+                    <div className='flex-1'>
+                      <p className='text-sm font-medium text-gray-900'>
+                        {activity.action}
+                      </p>
+                      <p className='text-sm text-gray-600'>
+                        {activity.property !== 'N/A' ? activity.property : ''}
+                      </p>
+                      <p className='text-xs text-gray-500'>
+                        {new Date(activity.time).toLocaleDateString()} by{' '}
+                        {activity.admin}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className='text-center py-8 text-gray-500'>
+                <p>No recent activity</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

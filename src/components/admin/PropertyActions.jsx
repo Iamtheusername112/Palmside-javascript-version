@@ -19,24 +19,41 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { MoreHorizontal, Edit, Trash2, Eye, Star, StarOff } from 'lucide-react'
+import {
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye,
+  Star,
+  StarOff,
+  RefreshCw,
+} from 'lucide-react'
 import Link from 'next/link'
+import { useToast } from '@/hooks/useToast'
 
-export function PropertyActions({ property }) {
+export function PropertyActions({ property, onDelete, onToggleFeatured }) {
+  const { success, error: showError } = useToast()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isTogglingFeatured, setIsTogglingFeatured] = useState(false)
 
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
-      // TODO: Implement delete API call
-      console.log('Deleting property:', property.id)
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      if (onDelete) {
+        await onDelete(property.id)
+        success(
+          'Property Deleted',
+          `${property.title} has been successfully deleted.`
+        )
+      }
       setShowDeleteDialog(false)
-      // TODO: Refresh properties list or remove from state
     } catch (error) {
       console.error('Error deleting property:', error)
+      showError(
+        'Delete Failed',
+        'Failed to delete the property. Please try again.'
+      )
     } finally {
       setIsDeleting(false)
     }
@@ -44,10 +61,36 @@ export function PropertyActions({ property }) {
 
   const toggleFeatured = async () => {
     try {
-      // TODO: Implement toggle featured API call
-      console.log('Toggling featured for property:', property.id)
+      setIsTogglingFeatured(true)
+      const response = await fetch(
+        `/api/properties/${property.id}/toggle-featured`,
+        {
+          method: 'PATCH',
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to toggle featured status')
+      }
+
+      if (onToggleFeatured) {
+        onToggleFeatured()
+      }
+
+      success(
+        'Featured Status Updated',
+        `${property.title} has been ${
+          property.isFeatured ? 'removed from' : 'marked as'
+        } featured.`
+      )
     } catch (error) {
       console.error('Error toggling featured:', error)
+      showError(
+        'Update Failed',
+        'Failed to update featured status. Please try again.'
+      )
+    } finally {
+      setIsTogglingFeatured(false)
     }
   }
 
@@ -83,8 +126,14 @@ export function PropertyActions({ property }) {
           <DropdownMenuItem
             onClick={toggleFeatured}
             className='flex items-center'
+            disabled={isTogglingFeatured}
           >
-            {property.isFeatured ? (
+            {isTogglingFeatured ? (
+              <>
+                <RefreshCw className='mr-2 h-4 w-4 animate-spin' />
+                {property.isFeatured ? 'Removing...' : 'Marking...'}
+              </>
+            ) : property.isFeatured ? (
               <>
                 <StarOff className='mr-2 h-4 w-4' />
                 Remove from Featured

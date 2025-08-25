@@ -1,83 +1,72 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Plus,
-  Search,
-  Edit,
-  Trash2,
-  Eye,
-  MoreHorizontal,
-  Filter,
-} from 'lucide-react'
+import { Plus, Search, RefreshCw, Filter } from 'lucide-react'
 import Link from 'next/link'
 import { PropertyActions } from '@/components/admin/PropertyActions'
-
-// Mock data - replace with real data from database
-const mockProperties = [
-  {
-    id: 1,
-    title: 'Modern Downtown Apartment',
-    location: 'Downtown, City Center',
-    price: 450000,
-    type: 'Apartment',
-    status: 'For Sale',
-    bedrooms: 2,
-    bathrooms: 2,
-    sqft: 1200,
-    isFeatured: true,
-    createdAt: '2024-01-15',
-  },
-  {
-    id: 2,
-    title: 'Luxury Family Home',
-    location: 'Suburban Heights',
-    price: 850000,
-    type: 'House',
-    status: 'For Sale',
-    bedrooms: 4,
-    bathrooms: 3,
-    sqft: 2800,
-    isFeatured: true,
-    createdAt: '2024-01-10',
-  },
-  {
-    id: 3,
-    title: 'Cozy Studio Loft',
-    location: 'Arts District',
-    price: 1800,
-    type: 'Loft',
-    status: 'For Rent',
-    bedrooms: 1,
-    bathrooms: 1,
-    sqft: 650,
-    isFeatured: false,
-    createdAt: '2024-01-12',
-  },
-  {
-    id: 4,
-    title: 'Waterfront Condo',
-    location: 'Harbor View',
-    price: 650000,
-    type: 'Condo',
-    status: 'Sold',
-    bedrooms: 3,
-    bathrooms: 2,
-    sqft: 1800,
-    isFeatured: false,
-    createdAt: '2024-01-08',
-  },
-]
+import { useProperties } from '@/hooks/useProperties'
+import { useToast } from '@/hooks/useToast'
 
 export default function PropertiesPage() {
-  const [properties, setProperties] = useState(mockProperties)
+  const {
+    properties: allProperties,
+    loading,
+    error,
+    pagination,
+    fetchProperties,
+    deleteProperty,
+  } = useProperties()
+  const { success, error: showError } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
 
-  const filteredProperties = properties.filter((property) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  useEffect(() => {
+    const params = {}
+    if (statusFilter !== 'all') params.status = statusFilter
+    if (debouncedSearchTerm) params.search = debouncedSearchTerm
+    fetchProperties(params)
+  }, [statusFilter, debouncedSearchTerm, fetchProperties])
+
+  const handleRefresh = async () => {
+    try {
+      await fetchProperties()
+      success(
+        'Properties Refreshed',
+        'Property list has been updated successfully.'
+      )
+    } catch (error) {
+      showError(
+        'Refresh Failed',
+        'Failed to refresh properties. Please try again.'
+      )
+    }
+  }
+
+  const handleDelete = async (propertyId) => {
+    try {
+      await deleteProperty(propertyId)
+      // The success message is handled in PropertyActions component
+    } catch (error) {
+      showError(
+        'Delete Failed',
+        'Failed to delete the property. Please try again.'
+      )
+    }
+  }
+
+  // Filter properties locally for immediate UI updates
+  const filteredProperties = allProperties.filter((property) => {
     const matchesSearch =
       property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.location.toLowerCase().includes(searchTerm.toLowerCase())
@@ -120,13 +109,37 @@ export default function PropertiesPage() {
             Manage all your properties from one place.
           </p>
         </div>
-        <Link href='/admin/properties/new'>
-          <Button>
-            <Plus className='w-4 h-4 mr-2' />
-            Add Property
+        <div className='flex space-x-3'>
+          <Button variant='outline' onClick={handleRefresh} disabled={loading}>
+            <RefreshCw
+              className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`}
+            />
+            Refresh
           </Button>
-        </Link>
+          <Link href='/admin/properties/new'>
+            <Button>
+              <Plus className='w-4 h-4 mr-2' />
+              Add Property
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <Card className='border-red-200 bg-red-50'>
+          <CardContent className='pt-6'>
+            <div className='flex items-center justify-between'>
+              <span className='text-sm font-medium text-red-800'>
+                Error: {error}
+              </span>
+              <Button variant='ghost' size='sm' onClick={handleRefresh}>
+                <RefreshCw className='w-4 h-4' />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters and Search */}
       <Card>
@@ -139,12 +152,14 @@ export default function PropertiesPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className='pl-10'
+                disabled={loading}
               />
             </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
               className='px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent'
+              disabled={loading}
             >
               <option value='all'>All Status</option>
               <option value='For Sale'>For Sale</option>
@@ -159,78 +174,112 @@ export default function PropertiesPage() {
       {/* Properties Table */}
       <Card>
         <CardHeader>
-          <CardTitle>All Properties ({filteredProperties.length})</CardTitle>
+          <CardTitle>
+            All Properties ({loading ? '...' : filteredProperties.length})
+            {pagination.total > 0 && (
+              <span className='text-sm font-normal text-gray-500 ml-2'>
+                of {pagination.total}
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className='overflow-x-auto'>
-            <table className='w-full'>
-              <thead>
-                <tr className='border-b border-gray-200'>
-                  <th className='text-left py-3 px-4 font-medium text-gray-900'>
-                    Property
-                  </th>
-                  <th className='text-left py-3 px-4 font-medium text-gray-900'>
-                    Type
-                  </th>
-                  <th className='text-left py-3 px-4 font-medium text-gray-900'>
-                    Price
-                  </th>
-                  <th className='text-left py-3 px-4 font-medium text-gray-900'>
-                    Status
-                  </th>
-                  <th className='text-left py-3 px-4 font-medium text-gray-900'>
-                    Details
-                  </th>
-                  <th className='text-left py-3 px-4 font-medium text-gray-900'>
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProperties.map((property) => (
-                  <tr
-                    key={property.id}
-                    className='border-b border-gray-100 hover:bg-gray-50'
-                  >
-                    <td className='py-4 px-4'>
-                      <div>
-                        <div className='font-medium text-gray-900'>
-                          {property.title}
-                        </div>
-                        <div className='text-sm text-gray-500'>
-                          {property.location}
-                        </div>
-                      </div>
-                    </td>
-                    <td className='py-4 px-4'>
-                      <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800'>
-                        {property.type}
-                      </span>
-                    </td>
-                    <td className='py-4 px-4 font-medium text-gray-900'>
-                      {formatPrice(property.price)}
-                    </td>
-                    <td className='py-4 px-4'>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                          property.status
-                        )}`}
-                      >
-                        {property.status}
-                      </span>
-                    </td>
-                    <td className='py-4 px-4 text-sm text-gray-500'>
-                      {property.bedrooms} bed, {property.bathrooms} bath,{' '}
-                      {property.sqft} sqft
-                    </td>
-                    <td className='py-4 px-4'>
-                      <PropertyActions property={property} />
-                    </td>
+          {loading ? (
+            <div className='space-y-4'>
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className='flex items-center space-x-4 animate-pulse'
+                >
+                  <div className='h-16 bg-gray-200 rounded w-1/3'></div>
+                  <div className='h-4 bg-gray-200 rounded w-20'></div>
+                  <div className='h-4 bg-gray-200 rounded w-24'></div>
+                  <div className='h-4 bg-gray-200 rounded w-20'></div>
+                  <div className='h-4 bg-gray-200 rounded w-32'></div>
+                  <div className='h-8 bg-gray-200 rounded w-16'></div>
+                </div>
+              ))}
+            </div>
+          ) : filteredProperties.length > 0 ? (
+            <div className='overflow-x-auto'>
+              <table className='w-full'>
+                <thead>
+                  <tr className='border-b border-gray-200'>
+                    <th className='text-left py-3 px-4 font-medium text-gray-900'>
+                      Property
+                    </th>
+                    <th className='text-left py-3 px-4 font-medium text-gray-900'>
+                      Type
+                    </th>
+                    <th className='text-left py-3 px-4 font-medium text-gray-900'>
+                      Price
+                    </th>
+                    <th className='text-left py-3 px-4 font-medium text-gray-900'>
+                      Status
+                    </th>
+                    <th className='text-left py-3 px-4 font-medium text-gray-900'>
+                      Details
+                    </th>
+                    <th className='text-left py-3 px-4 font-medium text-gray-900'>
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {filteredProperties.map((property) => (
+                    <tr
+                      key={property.id}
+                      className='border-b border-gray-100 hover:bg-gray-50'
+                    >
+                      <td className='py-4 px-4'>
+                        <div>
+                          <div className='font-medium text-gray-900'>
+                            {property.title}
+                          </div>
+                          <div className='text-sm text-gray-500'>
+                            {property.location}
+                          </div>
+                        </div>
+                      </td>
+                      <td className='py-4 px-4'>
+                        <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800'>
+                          {property.type}
+                        </span>
+                      </td>
+                      <td className='py-4 px-4 font-medium text-gray-900'>
+                        {formatPrice(property.price)}
+                      </td>
+                      <td className='py-4 px-4'>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                            property.status
+                          )}`}
+                        >
+                          {property.status}
+                        </span>
+                      </td>
+                      <td className='py-4 px-4 text-sm text-gray-500'>
+                        {property.bedrooms} bed, {property.bathrooms} bath,{' '}
+                        {property.sqft} sqft
+                      </td>
+                      <td className='py-4 px-4'>
+                        <PropertyActions
+                          property={property}
+                          onDelete={handleDelete}
+                          onToggleFeatured={() => fetchProperties()}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className='text-center py-12 text-gray-500'>
+              <p className='text-lg font-medium'>No properties found</p>
+              <p className='text-sm'>Try adjusting your search or filters</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
