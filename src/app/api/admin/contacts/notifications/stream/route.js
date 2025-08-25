@@ -2,31 +2,52 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   const encoder = new TextEncoder()
+  const abortController = new AbortController()
 
-  const stream = new ReadableStream({
-    start(controller) {
-      let isClosed = false
+  const stream = new ReadableStream(
+    {
+      start(controller) {
+        let isClosed = false
+        let interval = null
 
-      // Send initial connection message
-      const message = `data: ${JSON.stringify({
-        type: 'connection_established',
-        message: 'SSE connection established',
-        timestamp: new Date().toISOString(),
-      })}\n\n`
+        // Function to safely enqueue data
+        const safeEnqueue = (data) => {
+          try {
+            if (!isClosed && controller.signal && !controller.signal.aborted) {
+              controller.enqueue(data)
+            }
+          } catch (error) {
+            console.error('Error enqueueing data:', error)
+            isClosed = true
+            if (interval) clearInterval(interval)
+          }
+        }
 
-      try {
-        controller.enqueue(encoder.encode(message))
-      } catch (error) {
-        console.error('Error sending initial message:', error)
-        controller.close()
-        return
-      }
+        // Function to safely close controller
+        const safeClose = () => {
+          if (!isClosed) {
+            isClosed = true
+            if (interval) clearInterval(interval)
+            try {
+              controller.close()
+            } catch (closeError) {
+              console.log('Controller already closed during cleanup')
+            }
+          }
+        }
 
-      // Keep connection alive with periodic updates
-      const interval = setInterval(() => {
-        try {
-          // Check if controller is still open before sending
-          if (isClosed) {
+        // Send initial connection message
+        const message = `data: ${JSON.stringify({
+          type: 'connection_established',
+          message: 'SSE connection established',
+          timestamp: new Date().toISOString(),
+        })}\n\n`
+
+        safeEnqueue(encoder.encode(message))
+
+        // Keep connection alive with periodic updates
+        interval = setInterval(() => {
+          if (isClosed || controller.signal?.aborted) {
             clearInterval(interval)
             return
           }
@@ -36,35 +57,30 @@ export async function GET() {
             timestamp: new Date().toISOString(),
           })}\n\n`
 
-          controller.enqueue(encoder.encode(keepAlive))
-        } catch (error) {
-          console.error('Error sending keep-alive:', error)
-          clearInterval(interval)
-          isClosed = true
-          try {
-            controller.close()
-          } catch (closeError) {
-            // Controller might already be closed, ignore this error
-            console.log('Controller already closed during cleanup')
-          }
-        }
-      }, 30000) // Send keep-alive every 30 seconds
+          safeEnqueue(encoder.encode(keepAlive))
+        }, 30000) // Send keep-alive every 30 seconds
 
-      // Cleanup on close
-      return () => {
-        isClosed = true
-        clearInterval(interval)
-        try {
-          if (!controller.signal?.aborted) {
-            controller.close()
-          }
-        } catch (closeError) {
-          // Controller might already be closed, ignore this error
-          console.log('Controller already closed during final cleanup')
+        // Listen for abort signal
+        if (controller.signal) {
+          controller.signal.addEventListener('abort', () => {
+            safeClose()
+          })
         }
-      }
+
+        // Cleanup on close
+        return () => {
+          safeClose()
+        }
+      },
+      cancel() {
+        // This is called when the stream is cancelled
+        abortController.abort()
+      },
     },
-  })
+    {
+      signal: abortController.signal,
+    }
+  )
 
   return new Response(stream, {
     headers: {
