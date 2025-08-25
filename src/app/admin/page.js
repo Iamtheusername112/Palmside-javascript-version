@@ -161,7 +161,7 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className='space-y-3'>
+          <CardContent className='space-y-8'>
             <Link href='/admin/properties/new'>
               <Button variant='outline' className='w-full justify-start'>
                 <Plus className='w-4 h-4 mr-2' />
@@ -211,20 +211,28 @@ export default function AdminDashboard() {
                 ))}
               </div>
             ) : recentActivities.length > 0 ? (
-              <div className='space-y-4'>
+              <div className='max-h-80 overflow-y-auto space-y-3 pr-2'>
                 {recentActivities.map((activity) => (
-                  <div key={activity.id} className='flex items-start space-x-3'>
-                    <div className='w-2 h-2 bg-primary rounded-full mt-2'></div>
-                    <div className='flex-1'>
-                      <p className='text-sm font-medium text-gray-900'>
+                  <div
+                    key={activity.id}
+                    className='flex items-start space-x-3 pb-3 border-b border-gray-100 last:border-b-0'
+                  >
+                    <div className='w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0'></div>
+                    <div className='flex-1 min-w-0'>
+                      <p className='text-sm font-medium text-gray-900 truncate'>
                         {activity.action}
                       </p>
-                      <p className='text-sm text-gray-600'>
+                      <p className='text-sm text-gray-600 truncate'>
                         {activity.property !== 'N/A' ? activity.property : ''}
                       </p>
                       <p className='text-xs text-gray-500'>
-                        {new Date(activity.time).toLocaleDateString()} by{' '}
-                        {activity.admin}
+                        {new Date(activity.time).toLocaleDateString()} at{' '}
+                        {new Date(activity.time).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true,
+                        })}{' '}
+                        by {activity.admin}
                       </p>
                     </div>
                   </div>
