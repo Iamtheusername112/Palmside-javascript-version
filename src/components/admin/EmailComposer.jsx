@@ -231,33 +231,33 @@ export function EmailComposer({ isOpen, onClose, template, contact, onSend }) {
               <div className='grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-700'>
                 <div>
                   <code className='bg-blue-100 px-1 rounded'>
-                    {{ firstName }}
+                    {'{firstName}'}
                   </code>{' '}
                   - First name
                 </div>
                 <div>
                   <code className='bg-blue-100 px-1 rounded'>
-                    {{ lastName }}
+                    {'{lastName}'}
                   </code>{' '}
                   - Last name
                 </div>
                 <div>
-                  <code className='bg-blue-100 px-1 rounded'>{{ email }}</code>{' '}
+                  <code className='bg-blue-100 px-1 rounded'>{'{email}'}</code>{' '}
                   - Email
                 </div>
                 <div>
-                  <code className='bg-blue-100 px-1 rounded'>{{ phone }}</code>{' '}
+                  <code className='bg-blue-100 px-1 rounded'>{'{phone}'}</code>{' '}
                   - Phone
                 </div>
                 <div>
                   <code className='bg-blue-100 px-1 rounded'>
-                    {{ companyName }}
+                    {'{companyName}'}
                   </code>{' '}
                   - Company
                 </div>
                 <div>
                   <code className='bg-blue-100 px-1 rounded'>
-                    {{ agentName }}
+                    {'{agentName}'}
                   </code>{' '}
                   - Agent name
                 </div>
