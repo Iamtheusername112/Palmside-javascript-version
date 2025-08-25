@@ -90,7 +90,7 @@ export function ResponseTemplates() {
     }
   }
 
-  const updateTemplate = async () => {
+  const handleUpdateTemplate = async () => {
     if (
       !editingTemplate.name ||
       !editingTemplate.subject ||
@@ -368,7 +368,7 @@ export function ResponseTemplates() {
               />
             </div>
             <div className='flex space-x-2'>
-              <Button onClick={updateTemplate}>Update Template</Button>
+              <Button onClick={handleUpdateTemplate}>Update Template</Button>
               <Button
                 variant='outline'
                 onClick={() => setEditingTemplate(null)}
