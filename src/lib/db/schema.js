@@ -73,3 +73,19 @@ export const adminActivityLog = pgTable('admin_activity_log', {
   details: text('details'), // JSON string with additional details
   createdAt: timestamp('created_at').defaultNow(),
 })
+
+// Contact form submissions table
+export const contacts = pgTable('contacts', {
+  id: serial('id').primaryKey(),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone'),
+  subject: text('subject').notNull(),
+  message: text('message').notNull(),
+  status: varchar('status', { length: 20 }).default('new'), // new, read, responded, archived
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})

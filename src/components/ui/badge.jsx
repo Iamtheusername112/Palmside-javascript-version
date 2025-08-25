@@ -7,6 +7,7 @@ const badgeVariants = {
     secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
     destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/80",
     outline: "text-foreground",
+    success: "bg-green-100 text-green-800 border-green-200",
   },
   size: {
     default: "h-6 px-2.5 text-xs",

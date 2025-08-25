@@ -11,12 +11,14 @@ import {
   Plus,
   FileText,
   MessageSquare,
+  Contact,
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: Home },
   { name: 'Properties', href: '/admin/properties', icon: Building2 },
   { name: 'Add Property', href: '/admin/properties/new', icon: Plus },
+  { name: 'Contacts', href: '/admin/contacts', icon: Contact },
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
   { name: 'Reports', href: '/admin/reports', icon: FileText },

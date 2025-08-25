@@ -102,6 +102,25 @@ async function setupDatabase() {
     `
     console.log('✅ Admin activity log table created')
 
+    // Contacts table
+    await sql`
+      CREATE TABLE IF NOT EXISTS contacts (
+        id SERIAL PRIMARY KEY,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT,
+        subject TEXT NOT NULL,
+        message TEXT NOT NULL,
+        status VARCHAR(20) DEFAULT 'new',
+        ip_address TEXT,
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `
+    console.log('✅ Contacts table created')
+
     console.log('')
     console.log('🎉 Database setup complete!')
     console.log('')
@@ -109,6 +128,7 @@ async function setupDatabase() {
     console.log('1. Start your application: npm run dev')
     console.log('2. Visit: http://localhost:3000/admin')
     console.log('3. Sign in with Clerk to access the admin dashboard')
+    console.log('4. Contact forms will now be saved to the database!')
   } catch (error) {
     console.error('❌ Database setup failed:', error.message)
     process.exit(1)
