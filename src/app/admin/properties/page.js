@@ -8,7 +8,7 @@ import { Plus, Search, RefreshCw, Filter } from 'lucide-react'
 import Link from 'next/link'
 import { PropertyActions } from '@/components/admin/PropertyActions'
 import { useProperties } from '@/hooks/useProperties'
-import { useToast } from '@/hooks/useToast'
+import { useToast } from '@/contexts/ToastContext'
 
 export default function PropertiesPage() {
   const {
@@ -24,6 +24,16 @@ export default function PropertiesPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
 
+  // Filter properties locally for immediate UI updates
+  const filteredProperties = allProperties.filter((property) => {
+    const matchesSearch =
+      property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      property.location.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus =
+      statusFilter === 'all' || property.status === statusFilter
+    return matchesSearch && matchesStatus
+  })
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
@@ -37,6 +47,40 @@ export default function PropertiesPage() {
     if (debouncedSearchTerm) params.search = debouncedSearchTerm
     fetchProperties(params)
   }, [statusFilter, debouncedSearchTerm, fetchProperties])
+
+  // Add effect to show success toast when properties load
+  useEffect(() => {
+    if (!loading && allProperties.length > 0) {
+      success(
+        'Properties Loaded',
+        `Successfully loaded ${allProperties.length} properties.`
+      )
+    }
+  }, [loading, allProperties.length, success])
+
+  // Add effect to show toast when filters are applied
+  useEffect(() => {
+    if (debouncedSearchTerm || statusFilter !== 'all') {
+      const filteredCount = filteredProperties.length
+      if (filteredCount > 0) {
+        success(
+          'Filters Applied',
+          `Found ${filteredCount} properties matching your criteria.`
+        )
+      } else {
+        showError(
+          'No Results',
+          'No properties found matching your search criteria. Try adjusting your filters.'
+        )
+      }
+    }
+  }, [
+    debouncedSearchTerm,
+    statusFilter,
+    filteredProperties.length,
+    success,
+    showError,
+  ])
 
   const handleRefresh = async () => {
     try {
@@ -64,16 +108,6 @@ export default function PropertiesPage() {
       )
     }
   }
-
-  // Filter properties locally for immediate UI updates
-  const filteredProperties = allProperties.filter((property) => {
-    const matchesSearch =
-      property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.location.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus =
-      statusFilter === 'all' || property.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
 
   const getStatusColor = (status) => {
     switch (status) {

@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import Link from 'next/link'
-import { useToast } from '@/hooks/useToast'
+import { useToast } from '@/contexts/ToastContext'
 import { use } from 'react'
 
 export default function EditPropertyPage({ params }) {
@@ -71,8 +71,18 @@ export default function EditPropertyPage({ params }) {
           isFeatured: property.is_featured || false,
           isFavorite: property.is_favorite || false,
         })
+
+        // Show success toast for loading
+        success(
+          'Property Loaded',
+          `${property.title} loaded successfully for editing.`
+        )
       } catch (error) {
         setError(error.message)
+        showError(
+          'Failed to Load Property',
+          'Could not load property data. Please try again.'
+        )
       } finally {
         setIsLoading(false)
       }
@@ -81,7 +91,7 @@ export default function EditPropertyPage({ params }) {
     if (id) {
       loadProperty()
     }
-  }, [id])
+  }, [id, success, showError])
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -109,9 +119,16 @@ export default function EditPropertyPage({ params }) {
         throw new Error(errorData.error || 'Failed to update property')
       }
 
-      // Redirect to properties list
-      router.push('/admin/properties')
-      success('Property updated successfully!')
+      // Show success toast
+      success(
+        'Property Updated Successfully!',
+        `${formData.title} has been updated successfully.`
+      )
+
+      // Redirect to properties list after a short delay
+      setTimeout(() => {
+        router.push('/admin/properties')
+      }, 1500)
     } catch (error) {
       console.error('Error updating property:', error)
       showError(`Error: ${error.message}`)

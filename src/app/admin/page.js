@@ -12,7 +12,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useAdminStats } from '@/hooks/useAdminStats'
-import { useToast } from '@/hooks/useToast'
+import { useToast } from '@/contexts/ToastContext'
+import { useEffect } from 'react'
 
 export default function AdminDashboard() {
   const {
@@ -22,6 +23,16 @@ export default function AdminDashboard() {
     refreshStats,
   } = useAdminStats()
   const { success, error: showError } = useToast()
+
+  // Add effect to show success toast when dashboard loads
+  useEffect(() => {
+    if (!loading && dashboardStats) {
+      success(
+        'Dashboard Loaded',
+        'Welcome back! Your dashboard data has been loaded successfully.'
+      )
+    }
+  }, [loading, dashboardStats, success])
 
   const handleRefresh = async () => {
     try {

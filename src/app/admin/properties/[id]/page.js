@@ -22,9 +22,11 @@ import {
 import Link from 'next/link'
 import { PropertyActions } from '@/components/admin/PropertyActions'
 import { use } from 'react'
+import { useToast } from '@/contexts/ToastContext'
 
 export default function PropertyViewPage({ params }) {
   const router = useRouter()
+  const { success, error: showError } = useToast()
   const { id } = use(params)
   const [property, setProperty] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -39,8 +41,15 @@ export default function PropertyViewPage({ params }) {
         }
         const data = await response.json()
         setProperty(data)
+
+        // Show success toast for loading
+        success('Property Loaded', `${data.title} loaded successfully.`)
       } catch (error) {
         setError(error.message)
+        showError(
+          'Failed to Load Property',
+          'Could not load property data. Please try again.'
+        )
       } finally {
         setLoading(false)
       }
@@ -49,7 +58,7 @@ export default function PropertyViewPage({ params }) {
     if (id) {
       loadProperty()
     }
-  }, [id])
+  }, [id, success, showError])
 
   const formatPrice = (price) => {
     if (price >= 1000000) {

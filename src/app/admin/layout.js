@@ -1,7 +1,7 @@
 // import { UserButton } from '@clerk/nextjs'
 import { Sidebar } from '@/components/admin/Sidebar'
 import { ToastContainer } from '@/components/ui/ToastContainer'
-import { ToastProvider } from '@/components/ui/toast'
+import { ToastProvider } from '@/contexts/ToastContext'
 
 export default function AdminLayout({ children }) {
   return (

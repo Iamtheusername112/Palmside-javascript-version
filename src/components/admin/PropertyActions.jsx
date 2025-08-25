@@ -29,7 +29,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useToast } from '@/hooks/useToast'
+import { useToast } from '@/contexts/ToastContext'
 
 export function PropertyActions({ property, onDelete, onToggleFeatured }) {
   const { success, error: showError } = useToast()
