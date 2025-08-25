@@ -13,6 +13,8 @@ import {
   FileText,
   MessageSquare,
   Contact,
+  Zap,
+  Star,
 } from 'lucide-react'
 
 const navigation = [
@@ -25,8 +27,11 @@ const navigation = [
     icon: Contact,
     hasNotifications: true,
   },
-  { name: 'Users', href: '/admin/users', icon: Users },
+  { name: 'Priority', href: '/admin/priority', icon: Star },
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+  { name: 'Templates', href: '/admin/templates', icon: FileText },
+  { name: 'Test Realtime', href: '/admin/contacts/test-realtime', icon: Zap },
+  { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Reports', href: '/admin/reports', icon: FileText },
   { name: 'Messages', href: '/admin/messages', icon: MessageSquare },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
@@ -34,7 +39,7 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { notifications } = useContactNotifications()
+  const { notifications, loading } = useContactNotifications()
 
   return (
     <div className='w-64 bg-white border-r border-gray-200 min-h-screen'>
@@ -71,7 +76,11 @@ export function Sidebar() {
 
                   {showNotification && (
                     <div className='flex items-center space-x-1'>
-                      <span className='inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full'>
+                      <span
+                        className={`inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full transition-all duration-200 ${
+                          loading ? 'animate-pulse' : ''
+                        }`}
+                      >
                         {notifications.new}
                       </span>
                       {notifications.recent > 0 &&

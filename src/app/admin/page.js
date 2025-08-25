@@ -1,300 +1,318 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { useContactNotifications } from '@/hooks/useContactNotifications'
+import { ActivityFeed } from '@/components/admin/ActivityFeed'
+import { ContactAnalytics } from '@/components/admin/ContactAnalytics'
+import { ResponseTemplates } from '@/components/admin/ResponseTemplates'
 import {
-  Building2,
   Users,
+  MessageSquare,
   TrendingUp,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  BarChart3,
+  FileText,
+  Settings,
   Plus,
   Eye,
-  RefreshCw,
-  Contact,
+  ArrowRight,
 } from 'lucide-react'
-import Link from 'next/link'
-import { useAdminStats } from '@/hooks/useAdminStats'
-import { useToast } from '@/contexts/ToastContext'
-import { useEffect, useState } from 'react'
 
 export default function AdminDashboard() {
-  const {
-    stats: dashboardStats,
-    loading,
-    error,
-    refreshStats,
-  } = useAdminStats()
-  const { success, error: showError } = useToast()
-  const [contactNotifications, setContactNotifications] = useState({
-    new: 0,
-    recent: 0,
-    weekly: 0,
+  const { notifications } = useContactNotifications()
+  const [activeTab, setActiveTab] = useState('overview')
+  const [quickStats, setQuickStats] = useState({
+    totalContacts: 1247,
+    newContacts: 23,
+    readContacts: 1189,
+    respondedContacts: 156,
+    avgResponseTime: '2.3h',
+    responseRate: 87.2,
+    todayContacts: 28,
+    weeklyGrowth: 12.5,
   })
 
-  // Add effect to show success toast when dashboard loads
-  useEffect(() => {
-    if (!loading && dashboardStats) {
-      success(
-        'Dashboard Loaded',
-        'Welcome back! Your dashboard data has been loaded successfully.'
-      )
-    }
-  }, [loading, dashboardStats, success])
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'analytics', label: 'Analytics', icon: TrendingUp },
+    { id: 'activity', label: 'Activity Feed', icon: Eye },
+    { id: 'templates', label: 'Response Templates', icon: FileText },
+  ]
 
-  const fetchContactNotifications = async () => {
-    try {
-      const response = await fetch('/api/admin/contacts/notifications')
-      const data = await response.json()
-
-      if (response.ok) {
-        setContactNotifications(data)
-      }
-    } catch (error) {
-      console.error('Error fetching contact notifications:', error)
-    }
-  }
-
-  useEffect(() => {
-    fetchContactNotifications()
-
-    // Refresh notifications every 5 minutes
-    const interval = setInterval(fetchContactNotifications, 5 * 60 * 1000)
-
-    return () => clearInterval(interval)
-  }, [])
-
-  const handleRefresh = async () => {
-    try {
-      await refreshStats()
-      success(
-        'Dashboard Refreshed',
-        'Dashboard data has been updated successfully.'
-      )
-    } catch (error) {
-      showError(
-        'Refresh Failed',
-        'Failed to refresh dashboard data. Please try again.'
-      )
-    }
-  }
-
-  // Default stats structure
-  const stats = [
+  const recentContacts = [
     {
-      title: 'Total Properties',
-      value: dashboardStats?.stats?.totalProperties?.value || '0',
-      change: dashboardStats?.stats?.totalProperties?.change || '+0%',
-      changeType:
-        dashboardStats?.stats?.totalProperties?.changeType || 'positive',
-      icon: Building2,
+      id: 1,
+      name: 'John Doe',
+      email: 'john@example.com',
+      status: 'new',
+      time: '2 min ago',
     },
     {
-      title: 'Active Properties',
-      value: dashboardStats?.stats?.activeProperties?.value || '0',
-      change: dashboardStats?.stats?.activeProperties?.change || '+0%',
-      changeType:
-        dashboardStats?.stats?.activeProperties?.changeType || 'positive',
-      icon: Users,
+      id: 2,
+      name: 'Jane Smith',
+      email: 'jane@example.com',
+      status: 'read',
+      time: '15 min ago',
     },
     {
-      title: 'Featured Properties',
-      value: dashboardStats?.stats?.featuredProperties?.value || '0',
-      change: dashboardStats?.stats?.featuredProperties?.change || '+0%',
-      changeType:
-        dashboardStats?.stats?.featuredProperties?.changeType || 'positive',
-      icon: TrendingUp,
+      id: 3,
+      name: 'Bob Johnson',
+      email: 'bob@example.com',
+      status: 'responded',
+      time: '1 hour ago',
     },
     {
-      title: 'Total Views',
-      value: dashboardStats?.stats?.totalViews?.value || '0',
-      change: dashboardStats?.stats?.totalViews?.change || '+0%',
-      changeType: dashboardStats?.stats?.totalViews?.changeType || 'positive',
-      icon: Eye,
-    },
-    {
-      title: 'New Contacts',
-      value: contactNotifications.new.toString(),
-      change:
-        contactNotifications.recent > 0
-          ? `+${contactNotifications.recent} recent`
-          : 'No recent',
-      changeType: contactNotifications.new > 0 ? 'positive' : 'neutral',
-      icon: Contact,
+      id: 4,
+      name: 'Alice Brown',
+      email: 'alice@example.com',
+      status: 'new',
+      time: '2 hours ago',
     },
   ]
 
-  const recentActivities = dashboardStats?.recentActivities || []
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      new: { variant: 'default', label: 'New' },
+      read: { variant: 'secondary', label: 'Read' },
+      responded: { variant: 'success', label: 'Responded' },
+      archived: { variant: 'outline', label: 'Archived' },
+    }
+    const config = statusConfig[status] || statusConfig.new
+    return <Badge variant={config.variant}>{config.label}</Badge>
+  }
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return (
+          <div className='space-y-6'>
+            {/* Quick Stats */}
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
+              <Card>
+                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                  <CardTitle className='text-sm font-medium'>
+                    Total Contacts
+                  </CardTitle>
+                  <Users className='h-4 w-4 text-muted-foreground' />
+                </CardHeader>
+                <CardContent>
+                  <div className='text-2xl font-bold'>
+                    {quickStats.totalContacts.toLocaleString()}
+                  </div>
+                  <p className='text-xs text-muted-foreground'>
+                    +{quickStats.weeklyGrowth}% from last week
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                  <CardTitle className='text-sm font-medium'>
+                    New Contacts
+                  </CardTitle>
+                  <MessageSquare className='h-4 w-4 text-muted-foreground' />
+                </CardHeader>
+                <CardContent>
+                  <div className='text-2xl font-bold text-red-600'>
+                    {quickStats.newContacts}
+                  </div>
+                  <p className='text-xs text-muted-foreground'>
+                    {quickStats.todayContacts} today
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                  <CardTitle className='text-sm font-medium'>
+                    Response Rate
+                  </CardTitle>
+                  <CheckCircle className='h-4 w-4 text-muted-foreground' />
+                </CardHeader>
+                <CardContent>
+                  <div className='text-2xl font-bold text-green-600'>
+                    {quickStats.responseRate}%
+                  </div>
+                  <p className='text-xs text-muted-foreground'>
+                    Avg: {quickStats.avgResponseTime}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                  <CardTitle className='text-sm font-medium'>
+                    Today's Activity
+                  </CardTitle>
+                  <Clock className='h-4 w-4 text-muted-foreground' />
+                </CardHeader>
+                <CardContent>
+                  <div className='text-2xl font-bold text-blue-600'>
+                    {quickStats.todayContacts}
+                  </div>
+                  <p className='text-xs text-muted-foreground'>
+                    New contacts today
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Activity & Quick Actions */}
+            <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+              <Card>
+                <CardHeader>
+                  <CardTitle className='flex items-center justify-between'>
+                    <span>Recent Contacts</span>
+                    <Button variant='ghost' size='sm'>
+                      View All <ArrowRight className='h-4 w-4 ml-1' />
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className='space-y-3'>
+                    {recentContacts.map((contact) => (
+                      <div
+                        key={contact.id}
+                        className='flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50'
+                      >
+                        <div className='flex items-center space-x-3'>
+                          <div className='w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center'>
+                            <span className='text-sm font-medium text-gray-600'>
+                              {contact.name.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className='text-sm font-medium'>
+                              {contact.name}
+                            </p>
+                            <p className='text-xs text-gray-500'>
+                              {contact.email}
+                            </p>
+                          </div>
+                        </div>
+                        <div className='flex items-center space-x-2'>
+                          {getStatusBadge(contact.status)}
+                          <span className='text-xs text-gray-400'>
+                            {contact.time}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className='space-y-3'>
+                    <Button className='w-full justify-start' variant='outline'>
+                      <Plus className='h-4 w-4 mr-2' />
+                      Add New Contact
+                    </Button>
+                    <Button className='w-full justify-start' variant='outline'>
+                      <MessageSquare className='h-4 w-4 mr-2' />
+                      Send Bulk Response
+                    </Button>
+                    <Button className='w-full justify-start' variant='outline'>
+                      <FileText className='h-4 w-4 mr-2' />
+                      Generate Report
+                    </Button>
+                    <Button className='w-full justify-start' variant='outline'>
+                      <Settings className='h-4 w-4 mr-2' />
+                      Manage Templates
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Notification Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                  <div className='text-center p-4 bg-red-50 rounded-lg'>
+                    <div className='text-2xl font-bold text-red-600 mb-2'>
+                      {notifications.new}
+                    </div>
+                    <p className='text-sm text-red-600'>New Contacts</p>
+                    <p className='text-xs text-red-500'>Require attention</p>
+                  </div>
+                  <div className='text-center p-4 bg-blue-50 rounded-lg'>
+                    <div className='text-2xl font-bold text-blue-600 mb-2'>
+                      {notifications.recent}
+                    </div>
+                    <p className='text-sm text-blue-600'>Recent Contacts</p>
+                    <p className='text-xs text-blue-500'>Last 24 hours</p>
+                  </div>
+                  <div className='text-center p-4 bg-green-50 rounded-lg'>
+                    <div className='text-2xl font-bold text-green-600 mb-2'>
+                      {notifications.weekly}
+                    </div>
+                    <p className='text-sm text-green-600'>Weekly Total</p>
+                    <p className='text-xs text-green-500'>Last 7 days</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      case 'analytics':
+        return <ContactAnalytics />
+      case 'activity':
+        return <ActivityFeed />
+      case 'templates':
+        return <ResponseTemplates />
+      default:
+        return null
+    }
+  }
 
   return (
-    <div className='space-y-6'>
+    <div className='p-6 space-y-6'>
       {/* Header */}
-      <div className='flex items-center justify-between'>
-        <div>
-          <h1 className='text-3xl font-bold text-gray-900'>Dashboard</h1>
-          <p className='text-gray-600'>
-            Welcome back! Here's what's happening with your properties.
-          </p>
-        </div>
-        <div className='flex space-x-3'>
-          <Button variant='outline' onClick={handleRefresh} disabled={loading}>
-            <RefreshCw
-              className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`}
-            />
-            Refresh
-          </Button>
-          <Link href='/admin/properties/new'>
-            <Button>
-              <Plus className='w-4 h-4 mr-2' />
-              Add Property
-            </Button>
-          </Link>
-        </div>
+      <div>
+        <h1 className='text-3xl font-bold text-gray-900'>Admin Dashboard</h1>
+        <p className='text-gray-600 mt-2'>
+          Welcome back! Here's what's happening with your contacts today.
+        </p>
       </div>
 
-      {/* Error Display */}
-      {error && (
-        <Card className='border-red-200 bg-red-50'>
-          <CardContent className='pt-6'>
-            <div className='flex items-center space-x-2 text-red-800'>
-              <span className='text-sm font-medium'>Error: {error}</span>
-              <Button variant='ghost' size='sm' onClick={refreshStats}>
-                <RefreshCw className='w-4 h-4' />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Stats Grid */}
-      <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 lg:gap-6'>
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-              <CardTitle className='text-sm font-medium text-gray-600'>
-                {stat.title}
-              </CardTitle>
-              <stat.icon className='h-4 w-4 text-gray-400' />
-            </CardHeader>
-            <CardContent>
-              <div className='text-2xl font-bold text-gray-900'>
-                {loading ? '...' : stat.value}
-              </div>
-              <p
-                className={`text-xs ${
-                  stat.changeType === 'positive'
-                    ? 'text-green-600'
-                    : 'text-red-600'
+      {/* Tab Navigation */}
+      <div className='border-b border-gray-200'>
+        <nav className='-mb-px flex space-x-8'>
+          {tabs.map((tab) => {
+            const IconComponent = tab.icon
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                {loading ? '...' : stat.change} from last month
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+                <IconComponent className='h-4 w-4' />
+                <span>{tab.label}</span>
+              </button>
+            )
+          })}
+        </nav>
       </div>
 
-      {/* Quick Actions & Recent Activity */}
-      <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-8'>
-            <Link href='/admin/properties/new'>
-              <Button variant='outline' className='w-full justify-start'>
-                <Plus className='w-4 h-4 mr-2' />
-                Add New Property
-              </Button>
-            </Link>
-            <Link href='/admin/properties'>
-              <Button variant='outline' className='w-full justify-start'>
-                <Building2 className='w-4 h-4 mr-2' />
-                Manage Properties
-              </Button>
-            </Link>
-            <Link href='/admin/users'>
-              <Button variant='outline' className='w-full justify-start'>
-                <Users className='w-4 h-4 mr-2' />
-                View Users
-              </Button>
-            </Link>
-            <Link href='/admin/contacts'>
-              <Button variant='outline' className='w-full justify-start'>
-                <Contact className='w-4 h-4 mr-2' />
-                View Contacts
-                {contactNotifications.new > 0 && (
-                  <span className='ml-auto inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full'>
-                    {contactNotifications.new}
-                  </span>
-                )}
-              </Button>
-            </Link>
-            <Link href='/admin/analytics'>
-              <Button variant='outline' className='w-full justify-start'>
-                <TrendingUp className='w-4 h-4 mr-2' />
-                View Analytics
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className='space-y-4'>
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className='flex items-start space-x-3 animate-pulse'
-                  >
-                    <div className='w-2 h-2 bg-gray-300 rounded-full mt-2'></div>
-                    <div className='flex-1 space-y-2'>
-                      <div className='h-4 bg-gray-300 rounded w-3/4'></div>
-                      <div className='h-3 bg-gray-300 rounded w-1/2'></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : recentActivities.length > 0 ? (
-              <div className='max-h-80 overflow-y-auto space-y-3 pr-2'>
-                {recentActivities.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className='flex items-start space-x-3 pb-3 border-b border-gray-100 last:border-b-0'
-                  >
-                    <div className='w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0'></div>
-                    <div className='flex-1 min-w-0'>
-                      <p className='text-sm font-medium text-gray-900 truncate'>
-                        {activity.action}
-                      </p>
-                      <p className='text-sm text-gray-600 truncate'>
-                        {activity.property !== 'N/A' ? activity.property : ''}
-                      </p>
-                      <p className='text-xs text-gray-500'>
-                        {new Date(activity.time).toLocaleDateString()} at{' '}
-                        {new Date(activity.time).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: true,
-                        })}{' '}
-                        by {activity.admin}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className='text-center py-8 text-gray-500'>
-                <p>No recent activity</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Tab Content */}
+      {renderTabContent()}
     </div>
   )
 }

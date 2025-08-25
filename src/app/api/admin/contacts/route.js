@@ -89,9 +89,35 @@ export async function PATCH(request) {
       .where(eq(contacts.id, id))
       .returning()
 
+    // Broadcast real-time update to connected clients
+    try {
+      await fetch(
+        `${
+          process.env.NEXTAUTH_URL || 'http://localhost:3000'
+        }/api/admin/contacts/notifications/broadcast`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'contact_status_updated',
+            data: {
+              contactId: id,
+              newStatus: status,
+              previousStatus: updatedContact[0].status, // Assuming updatedContact[0] is the contact object
+              updatedAt: new Date().toISOString(),
+            },
+          }),
+        }
+      )
+    } catch (broadcastError) {
+      console.error('Failed to broadcast update:', broadcastError)
+      // Don't fail the main request if broadcasting fails
+    }
+
     return NextResponse.json({
       success: true,
-      contact: updatedContact,
+      message: 'Contact status updated successfully',
+      contact: updatedContact[0],
     })
   } catch (error) {
     console.error('Error updating contact:', error)

@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useToast } from '@/contexts/ToastContext'
+import { useContactNotifications } from '@/hooks/useContactNotifications'
 import {
   Search,
   Eye,
@@ -38,13 +39,19 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
+import { EmailComposer } from '@/components/admin/EmailComposer'
 
 export default function AdminContactsPage() {
   const { success, error } = useToast()
+  const { notifications, markContactAsRead, updateCountsBulk } =
+    useContactNotifications()
   const [contacts, setContacts] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedContact, setSelectedContact] = useState(null)
   const [showDetails, setShowDetails] = useState(false)
+  const [selectedContacts, setSelectedContacts] = useState([])
+  const [showEmailComposer, setShowEmailComposer] = useState(false)
+  const [emailContact, setEmailContact] = useState(null)
   const [filters, setFilters] = useState({
     status: 'all',
     search: '',
@@ -55,11 +62,6 @@ export default function AdminContactsPage() {
     page: 1,
     total: 0,
     totalPages: 0,
-  })
-  const [notifications, setNotifications] = useState({
-    new: 0,
-    recent: 0,
-    weekly: 0,
   })
 
   useEffect(() => {
@@ -97,7 +99,7 @@ export default function AdminContactsPage() {
     }
   }
 
-  const updateContactStatus = async (id, newStatus) => {
+  const updateContactStatus = async (id, newStatus, previousStatus) => {
     try {
       const response = await fetch('/api/admin/contacts', {
         method: 'PATCH',
@@ -118,6 +120,11 @@ export default function AdminContactsPage() {
         // Update selected contact if it's the one being viewed
         if (selectedContact && selectedContact.id === id) {
           setSelectedContact((prev) => ({ ...prev, status: newStatus }))
+        }
+
+        // Immediately update notification counts if marking as read
+        if (previousStatus === 'new' && newStatus !== 'new') {
+          markContactAsRead(id, previousStatus)
         }
 
         success('Status Updated', `Contact status updated to ${newStatus}`)
@@ -161,7 +168,7 @@ export default function AdminContactsPage() {
     setFilters((prev) => ({ ...prev, [key]: value, page: 1 }))
   }
 
-  const markContactAsRead = async (contactId) => {
+  const handleMarkContactAsRead = async (contactId) => {
     try {
       const response = await fetch('/api/admin/contacts', {
         method: 'PATCH',
@@ -184,33 +191,92 @@ export default function AdminContactsPage() {
           setSelectedContact((prev) => ({ ...prev, status: 'read' }))
         }
 
-        // Update notification count
-        setNotifications((prev) => ({
-          ...prev,
-          new: Math.max(0, prev.new - 1),
-        }))
+        // Immediately update notification counts
+        markContactAsRead(contactId, 'new')
       }
     } catch (error) {
       console.error('Error marking contact as read:', error)
     }
   }
 
-  const fetchNotifications = async () => {
-    try {
-      const response = await fetch('/api/admin/contacts/notifications')
-      const data = await response.json()
+  const handleBulkMarkAsRead = async () => {
+    if (selectedContacts.length === 0) return
 
-      if (response.ok) {
-        setNotifications(data)
+    try {
+      const promises = selectedContacts.map((contactId) =>
+        fetch('/api/admin/contacts', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: contactId, status: 'read' }),
+        })
+      )
+
+      const responses = await Promise.all(promises)
+      const allSuccessful = responses.every((response) => response.ok)
+
+      if (allSuccessful) {
+        // Update local state
+        setContacts((prev) =>
+          prev.map((contact) =>
+            selectedContacts.includes(contact.id)
+              ? { ...contact, status: 'read' }
+              : contact
+          )
+        )
+
+        // Update selected contact if it's being viewed
+        if (selectedContact && selectedContacts.includes(selectedContact.id)) {
+          setSelectedContact((prev) => ({ ...prev, status: 'read' }))
+        }
+
+        // Immediately update notification counts
+        updateCountsBulk(selectedContacts, 'new')
+
+        // Clear selection
+        setSelectedContacts([])
+
+        success(
+          'Bulk Update',
+          `${selectedContacts.length} contacts marked as read`
+        )
+      } else {
+        error('Bulk Update Failed', 'Some contacts could not be updated')
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error)
+      console.error('Error in bulk update:', error)
+      error('Network Error', 'Failed to connect to the server')
     }
   }
 
-  useEffect(() => {
-    fetchNotifications()
-  }, [])
+  const handleSelectContact = (contactId, checked) => {
+    if (checked) {
+      setSelectedContacts((prev) => [...prev, contactId])
+    } else {
+      setSelectedContacts((prev) => prev.filter((id) => id !== contactId))
+    }
+  }
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      const newContactIds = contacts
+        .filter((contact) => contact.status === 'new')
+        .map((contact) => contact.id)
+      setSelectedContacts(newContactIds)
+    } else {
+      setSelectedContacts([])
+    }
+  }
+
+  const handleQuickEmail = (contact) => {
+    setEmailContact(contact)
+    setShowEmailComposer(true)
+  }
+
+  const handleEmailSent = (emailData) => {
+    success('Email Sent', `Email sent to ${emailData.to}`)
+    setShowEmailComposer(false)
+    setEmailContact(null)
+  }
 
   return (
     <div className='p-6 space-y-6'>
@@ -244,37 +310,57 @@ export default function AdminContactsPage() {
 
       {/* Filters */}
       <div className='bg-white rounded-lg border p-4 space-y-4'>
-        <div className='flex items-center space-x-4'>
-          <div className='flex items-center space-x-2'>
-            <Filter className='h-4 w-4 text-gray-500' />
-            <span className='text-sm font-medium text-gray-700'>Filters:</span>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center space-x-4'>
+            <div className='flex items-center space-x-2'>
+              <Filter className='h-4 w-4 text-gray-500' />
+              <span className='text-sm font-medium text-gray-700'>
+                Filters:
+              </span>
+            </div>
+
+            <Select
+              value={filters.status}
+              onValueChange={(value) => handleFilterChange('status', value)}
+            >
+              <SelectTrigger className='w-32'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>All Status</SelectItem>
+                <SelectItem value='new'>New</SelectItem>
+                <SelectItem value='read'>Read</SelectItem>
+                <SelectItem value='responded'>Responded</SelectItem>
+                <SelectItem value='archived'>Archived</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className='relative flex-1 max-w-md'>
+              <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
+              <Input
+                placeholder='Search contacts...'
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+                className='pl-10'
+              />
+            </div>
           </div>
 
-          <Select
-            value={filters.status}
-            onValueChange={(value) => handleFilterChange('status', value)}
-          >
-            <SelectTrigger className='w-32'>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value='all'>All Status</SelectItem>
-              <SelectItem value='new'>New</SelectItem>
-              <SelectItem value='read'>Read</SelectItem>
-              <SelectItem value='responded'>Responded</SelectItem>
-              <SelectItem value='archived'>Archived</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div className='relative flex-1 max-w-md'>
-            <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
-            <Input
-              placeholder='Search contacts...'
-              value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              className='pl-10'
-            />
-          </div>
+          {/* Bulk Actions */}
+          {selectedContacts.length > 0 && (
+            <div className='flex items-center space-x-2'>
+              <span className='text-sm text-gray-600'>
+                {selectedContacts.length} selected
+              </span>
+              <Button
+                size='sm'
+                variant='outline'
+                onClick={handleBulkMarkAsRead}
+              >
+                Mark as Read
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -294,6 +380,18 @@ export default function AdminContactsPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className='w-12'>
+                  <input
+                    type='checkbox'
+                    checked={
+                      contacts.filter((c) => c.status === 'new').length > 0 &&
+                      selectedContacts.length ===
+                        contacts.filter((c) => c.status === 'new').length
+                    }
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+                  />
+                </TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
@@ -306,6 +404,18 @@ export default function AdminContactsPage() {
             <TableBody>
               {contacts.map((contact) => (
                 <TableRow key={contact.id}>
+                  <TableCell>
+                    {contact.status === 'new' && (
+                      <input
+                        type='checkbox'
+                        checked={selectedContacts.includes(contact.id)}
+                        onChange={(e) =>
+                          handleSelectContact(contact.id, e.target.checked)
+                        }
+                        className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+                      />
+                    )}
+                  </TableCell>
                   <TableCell className='font-mono text-sm'>
                     #{contact.id}
                   </TableCell>
@@ -350,7 +460,7 @@ export default function AdminContactsPage() {
                           setShowDetails(true)
                           // Mark as read if it's a new contact
                           if (contact.status === 'new') {
-                            markContactAsRead(contact.id)
+                            handleMarkContactAsRead(contact.id)
                           }
                         }}
                       >
@@ -358,10 +468,19 @@ export default function AdminContactsPage() {
                         View
                       </Button>
 
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={() => handleQuickEmail(contact)}
+                      >
+                        <Mail className='h-4 w-4 mr-1' />
+                        Email
+                      </Button>
+
                       <Select
                         value={contact.status}
                         onValueChange={(value) =>
-                          updateContactStatus(contact.id, value)
+                          updateContactStatus(contact.id, value, contact.status)
                         }
                       >
                         <SelectTrigger className='w-24 h-8'>
@@ -518,7 +637,11 @@ export default function AdminContactsPage() {
                 <Select
                   value={selectedContact.status}
                   onValueChange={(value) =>
-                    updateContactStatus(selectedContact.id, value)
+                    updateContactStatus(
+                      selectedContact.id,
+                      value,
+                      selectedContact.status
+                    )
                   }
                 >
                   <SelectTrigger>
@@ -536,6 +659,18 @@ export default function AdminContactsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Email Composer */}
+      <EmailComposer
+        isOpen={showEmailComposer}
+        onClose={() => {
+          setShowEmailComposer(false)
+          setEmailContact(null)
+        }}
+        template={null} // No template pre-selected
+        contact={emailContact}
+        onSend={handleEmailSent}
+      />
     </div>
   )
 }
