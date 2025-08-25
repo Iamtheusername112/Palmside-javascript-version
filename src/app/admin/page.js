@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useContactNotifications } from '@/hooks/useContactNotifications'
 import { useAdminStats } from '@/hooks/useAdminStats'
 import { useContacts } from '@/hooks/useContacts'
+import { useRealTimeUpdates } from '@/hooks/useRealTimeUpdates'
 import { ActivityFeed } from '@/components/admin/ActivityFeed'
 import { ContactAnalytics } from '@/components/admin/ContactAnalytics'
 import { ResponseTemplates } from '@/components/admin/ResponseTemplates'
@@ -23,14 +25,26 @@ import {
   Plus,
   Eye,
   ArrowRight,
+  Wifi,
+  WifiOff,
+  Bell,
+  BellOff,
 } from 'lucide-react'
 
 export default function AdminDashboard() {
-  const { notifications } = useContactNotifications()
-  const { stats, loading: statsLoading } = useAdminStats()
-  const { contacts, loading: contactsLoading } = useContacts(1, 5) // Get first 5 contacts
+  const router = useRouter()
+  const { notifications, refreshNotifications } = useContactNotifications()
+  const { stats, loading: statsLoading, refreshStats } = useAdminStats()
+  const {
+    contacts,
+    loading: contactsLoading,
+    refreshContacts,
+  } = useContacts(1, 5) // Get first 5 contacts
 
   const [activeTab, setActiveTab] = useState('overview')
+  const [isOnline, setIsOnline] = useState(true)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
+  const [lastUpdate, setLastUpdate] = useState(new Date())
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -38,6 +52,45 @@ export default function AdminDashboard() {
     { id: 'activity', label: 'Activity Feed', icon: Eye },
     { id: 'templates', label: 'Response Templates', icon: FileText },
   ]
+
+  // Real-time updates handler
+  const handleRealTimeUpdate = (data) => {
+    if (data.type === 'notifications_update') {
+      refreshNotifications()
+    } else if (data.type === 'contact_update' || data.type === 'new_contact') {
+      refreshStats()
+      refreshContacts()
+    }
+    setLastUpdate(new Date())
+  }
+
+  // Setup real-time updates
+  useRealTimeUpdates(handleRealTimeUpdate)
+
+  // Check online status
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  // Auto-refresh every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshStats()
+      refreshContacts()
+      setLastUpdate(new Date())
+    }, 5 * 60 * 1000)
+
+    return () => clearInterval(interval)
+  }, [refreshStats, refreshContacts])
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -50,11 +103,83 @@ export default function AdminDashboard() {
     return <Badge variant={config.variant}>{config.label}</Badge>
   }
 
+  // Quick Actions handlers
+  const handleAddNewContact = () => {
+    router.push('/admin/contacts')
+  }
+
+  const handleSendBulkResponse = () => {
+    router.push('/admin/contacts')
+  }
+
+  const handleGenerateReport = () => {
+    setActiveTab('analytics')
+  }
+
+  const handleManageTemplates = () => {
+    setActiveTab('templates')
+  }
+
+  const handleViewAllContacts = () => {
+    router.push('/admin/contacts')
+  }
+
+  const handleManualRefresh = () => {
+    refreshStats()
+    refreshContacts()
+    refreshNotifications()
+    setLastUpdate(new Date())
+  }
+
+  const toggleNotifications = () => {
+    setNotificationsEnabled(!notificationsEnabled)
+  }
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
         return (
           <div className='space-y-6'>
+            {/* Status Bar */}
+            <div className='flex items-center justify-between p-4 bg-gray-50 rounded-lg'>
+              <div className='flex items-center space-x-4'>
+                <div className='flex items-center space-x-2'>
+                  {isOnline ? (
+                    <Wifi className='h-4 w-4 text-green-600' />
+                  ) : (
+                    <WifiOff className='h-4 w-4 text-red-600' />
+                  )}
+                  <span className='text-sm text-gray-600'>
+                    {isOnline ? 'Online' : 'Offline'}
+                  </span>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  {notificationsEnabled ? (
+                    <Bell className='h-4 w-4 text-blue-600' />
+                  ) : (
+                    <BellOff className='h-4 w-4 text-gray-400' />
+                  )}
+                  <span className='text-sm text-gray-600'>
+                    Notifications{' '}
+                    {notificationsEnabled ? 'Enabled' : 'Disabled'}
+                  </span>
+                </div>
+              </div>
+              <div className='flex items-center space-x-2'>
+                <span className='text-xs text-gray-500'>
+                  Last updated: {lastUpdate.toLocaleTimeString()}
+                </span>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleManualRefresh}
+                  disabled={statsLoading || contactsLoading}
+                >
+                  <ArrowRight className='h-4 w-4' />
+                </Button>
+              </div>
+            </div>
+
             {/* Quick Stats */}
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
               <Card>
@@ -142,7 +267,8 @@ export default function AdminDashboard() {
                     contacts.map((contact) => (
                       <div
                         key={contact.id}
-                        className='flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50'
+                        className='flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer'
+                        onClick={() => router.push(`/admin/contacts`)}
                       >
                         <div className='flex items-center space-x-3'>
                           <div className='w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center'>
@@ -173,7 +299,11 @@ export default function AdminDashboard() {
                       No contacts found
                     </div>
                   )}
-                  <Button className='w-full justify-start' variant='outline'>
+                  <Button
+                    className='w-full justify-start'
+                    variant='outline'
+                    onClick={handleViewAllContacts}
+                  >
                     <ArrowRight className='h-4 w-4 mr-2' />
                     View All Contacts
                   </Button>
@@ -188,19 +318,35 @@ export default function AdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                  <Button className='w-full justify-start' variant='outline'>
+                  <Button
+                    className='w-full justify-start'
+                    variant='outline'
+                    onClick={handleAddNewContact}
+                  >
                     <Plus className='h-4 w-4 mr-2' />
                     Add New Contact
                   </Button>
-                  <Button className='w-full justify-start' variant='outline'>
+                  <Button
+                    className='w-full justify-start'
+                    variant='outline'
+                    onClick={handleSendBulkResponse}
+                  >
                     <MessageSquare className='h-4 w-4 mr-2' />
                     Send Bulk Response
                   </Button>
-                  <Button className='w-full justify-start' variant='outline'>
+                  <Button
+                    className='w-full justify-start'
+                    variant='outline'
+                    onClick={handleGenerateReport}
+                  >
                     <FileText className='h-4 w-4 mr-2' />
                     Generate Report
                   </Button>
-                  <Button className='w-full justify-start' variant='outline'>
+                  <Button
+                    className='w-full justify-start'
+                    variant='outline'
+                    onClick={handleManageTemplates}
+                  >
                     <Settings className='h-4 w-4 mr-2' />
                     Manage Templates
                   </Button>
@@ -211,7 +357,20 @@ export default function AdminDashboard() {
             {/* Notification Summary */}
             <Card>
               <CardHeader>
-                <CardTitle>Notification Summary</CardTitle>
+                <CardTitle className='flex items-center justify-between'>
+                  <span>Notification Summary</span>
+                  <Button
+                    variant='ghost'
+                    size='sm'
+                    onClick={toggleNotifications}
+                  >
+                    {notificationsEnabled ? (
+                      <Bell className='h-4 w-4' />
+                    ) : (
+                      <BellOff className='h-4 w-4' />
+                    )}
+                  </Button>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>

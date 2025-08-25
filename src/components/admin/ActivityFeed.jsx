@@ -14,6 +14,8 @@ import {
   Clock,
   RefreshCw,
   Filter,
+  User,
+  Settings,
 } from 'lucide-react'
 import {
   Select,
@@ -22,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useActivityFeed } from '@/hooks/useActivityFeed'
 
 const activityTypes = {
   contact_viewed: {
@@ -49,188 +52,215 @@ const activityTypes = {
     label: 'New Contact',
     color: 'bg-red-100 text-red-800',
   },
+  admin_action: {
+    icon: Settings,
+    label: 'Admin Action',
+    color: 'bg-orange-100 text-orange-800',
+  },
 }
 
 export function ActivityFeed() {
-  const [activities, setActivities] = useState([])
   const [filter, setFilter] = useState('all')
-  const [loading, setLoading] = useState(false)
+  const { activities, loading, error, refreshActivities } = useActivityFeed()
 
-  // Mock data for demonstration - in real app, this would come from SSE or WebSocket
-  const mockActivities = [
-    {
-      id: 1,
-      type: 'new_contact',
-      contactId: 123,
-      contactName: 'John Doe',
-      contactEmail: 'john@example.com',
-      timestamp: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
-      description: 'New contact submission received',
-    },
-    {
-      id: 2,
-      type: 'contact_viewed',
-      contactId: 122,
-      contactName: 'Jane Smith',
-      contactEmail: 'jane@example.com',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-      description: 'Contact details viewed',
-    },
-    {
-      id: 3,
-      type: 'contact_marked_read',
-      contactId: 121,
-      contactName: 'Bob Johnson',
-      contactEmail: 'bob@example.com',
-      timestamp: new Date(Date.now() - 10 * 60 * 1000), // 10 minutes ago
-      description: 'Contact marked as read',
-    },
-    {
-      id: 4,
-      type: 'contact_responded',
-      contactId: 120,
-      contactName: 'Alice Brown',
-      contactEmail: 'alice@example.com',
-      timestamp: new Date(Date.now() - 15 * 60 * 1000), // 15 minutes ago
-      description: 'Response sent to contact',
-    },
-  ]
-
-  useEffect(() => {
-    setActivities(mockActivities)
-  }, [])
-
-  const addActivity = (activity) => {
-    setActivities((prev) => [activity, ...prev.slice(0, 49)]) // Keep last 50 activities
+  const getActivityIcon = (type) => {
+    const config = activityTypes[type] || activityTypes.admin_action
+    const IconComponent = config.icon
+    return <IconComponent className='h-4 w-4' />
   }
 
-  const refreshActivities = () => {
-    setLoading(true)
-    // Simulate refresh
-    setTimeout(() => {
-      setLoading(false)
-    }, 1000)
+  const getActivityColor = (type) => {
+    const config = activityTypes[type] || activityTypes.admin_action
+    return config.color
+  }
+
+  const getActivityLabel = (type) => {
+    const config = activityTypes[type] || activityTypes.admin_action
+    return config.label
+  }
+
+  const formatTimestamp = (timestamp) => {
+    const now = new Date()
+    const activityTime = new Date(timestamp)
+    const diffInMinutes = Math.floor((now - activityTime) / (1000 * 60))
+
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`
+    return `${Math.floor(diffInMinutes / 1440)}d ago`
   }
 
   const filteredActivities = activities.filter((activity) => {
     if (filter === 'all') return true
-    return activity.type === filter
+    if (filter === 'contacts') return activity.entityType === 'contact'
+    if (filter === 'admin') return activity.type === 'admin_action'
+    return true
   })
 
-  const formatTimeAgo = (timestamp) => {
-    const now = new Date()
-    const diff = now - timestamp
-    const minutes = Math.floor(diff / (1000 * 60))
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-
-    if (minutes < 1) return 'Just now'
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    return `${days}d ago`
+  if (loading) {
+    return (
+      <div className='flex items-center justify-center h-64'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
+      </div>
+    )
   }
 
-  const getActivityIcon = (type) => {
-    const IconComponent = activityTypes[type]?.icon || Clock
-    return <IconComponent className='h-4 w-4' />
+  if (error) {
+    return (
+      <Card>
+        <CardContent className='flex items-center justify-center h-32'>
+          <div className='text-center'>
+            <p className='text-red-600 mb-2'>Failed to load activity feed</p>
+            <Button onClick={refreshActivities} variant='outline' size='sm'>
+              <RefreshCw className='h-4 w-4 mr-2' />
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
-    <Card className='h-full'>
-      <CardHeader className='pb-3'>
-        <div className='flex items-center justify-between'>
-          <CardTitle className='flex items-center space-x-2'>
-            <Activity className='h-5 w-5 text-blue-600' />
-            <span>Live Activity Feed</span>
-          </CardTitle>
-          <div className='flex items-center space-x-2'>
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className='w-32 h-8'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='all'>All Activities</SelectItem>
-                <SelectItem value='new_contact'>New Contacts</SelectItem>
-                <SelectItem value='contact_viewed'>Viewed</SelectItem>
-                <SelectItem value='contact_marked_read'>Marked Read</SelectItem>
-                <SelectItem value='contact_responded'>Responded</SelectItem>
-                <SelectItem value='contact_archived'>Archived</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              size='sm'
-              variant='outline'
-              onClick={refreshActivities}
-              disabled={loading}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
-              />
-            </Button>
-          </div>
+    <div className='space-y-6'>
+      {/* Header */}
+      <div className='flex items-center justify-between'>
+        <div>
+          <h2 className='text-2xl font-bold text-gray-900'>Activity Feed</h2>
+          <p className='text-gray-600 mt-1'>
+            Real-time updates on contacts and admin activities
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className='pt-0'>
-        <ScrollArea className='h-[400px]'>
-          <div className='space-y-3'>
-            {filteredActivities.length === 0 ? (
-              <div className='text-center py-8 text-gray-500'>
-                <Activity className='h-12 w-12 mx-auto mb-2 text-gray-300' />
-                <p>No activities found</p>
-              </div>
-            ) : (
-              filteredActivities.map((activity) => (
-                <div
-                  key={activity.id}
-                  className='flex items-start space-x-3 p-3 rounded-lg border hover:bg-gray-50 transition-colors'
-                >
-                  <div className='flex-shrink-0 mt-1'>
+        <div className='flex items-center space-x-3'>
+          <Select value={filter} onValueChange={setFilter}>
+            <SelectTrigger className='w-40'>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='all'>All Activities</SelectItem>
+              <SelectItem value='contacts'>Contact Activities</SelectItem>
+              <SelectItem value='admin'>Admin Actions</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant='outline' size='sm' onClick={refreshActivities}>
+            <RefreshCw className='h-4 w-4 mr-2' />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* Activity List */}
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center space-x-2'>
+            <Activity className='h-5 w-5' />
+            <span>Recent Activities</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredActivities.length === 0 ? (
+            <div className='text-center py-8 text-gray-500'>
+              No activities found
+            </div>
+          ) : (
+            <ScrollArea className='h-96'>
+              <div className='space-y-4'>
+                {filteredActivities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className='flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50'
+                  >
                     <div
-                      className={`p-2 rounded-full ${
-                        activityTypes[activity.type]?.color || 'bg-gray-100'
-                      }`}
+                      className={`p-2 rounded-full ${getActivityColor(
+                        activity.type
+                      )}`}
                     >
                       {getActivityIcon(activity.type)}
                     </div>
-                  </div>
-                  <div className='flex-1 min-w-0'>
-                    <div className='flex items-center space-x-2 mb-1'>
-                      <span className='text-sm font-medium text-gray-900'>
-                        {activity.contactName}
-                      </span>
-                      <Badge variant='outline' className='text-xs'>
-                        {activityTypes[activity.type]?.label || 'Unknown'}
-                      </Badge>
+                    <div className='flex-1 min-w-0'>
+                      <div className='flex items-center space-x-2 mb-1'>
+                        <Badge variant='outline' className='text-xs'>
+                          {getActivityLabel(activity.type)}
+                        </Badge>
+                        <span className='text-xs text-gray-500'>
+                          {formatTimestamp(activity.timestamp)}
+                        </span>
+                      </div>
+                      <p className='text-sm font-medium text-gray-900'>
+                        {activity.description}
+                      </p>
+                      {activity.contactName && (
+                        <div className='flex items-center space-x-2 mt-1'>
+                          <User className='h-3 w-3 text-gray-400' />
+                          <span className='text-xs text-gray-600'>
+                            {activity.contactName} ({activity.contactEmail})
+                          </span>
+                        </div>
+                      )}
+                      {activity.details && (
+                        <p className='text-xs text-gray-500 mt-1'>
+                          {activity.details}
+                        </p>
+                      )}
                     </div>
-                    <p className='text-sm text-gray-600 mb-1'>
-                      {activity.description}
-                    </p>
-                    <div className='flex items-center justify-between'>
-                      <span className='text-xs text-gray-500'>
-                        {activity.contactEmail}
-                      </span>
-                      <span className='text-xs text-gray-400'>
-                        {formatTimeAgo(activity.timestamp)}
-                      </span>
-                    </div>
                   </div>
-                  <Button
-                    size='sm'
-                    variant='ghost'
-                    className='flex-shrink-0'
-                    onClick={() => {
-                      // Navigate to contact details
-                      window.location.href = `/admin/contacts?id=${activity.contactId}`
-                    }}
-                  >
-                    View
-                  </Button>
-                </div>
-              ))
-            )}
-          </div>
-        </ScrollArea>
-      </CardContent>
-    </Card>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Summary Stats */}
+      <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+        <Card>
+          <CardContent className='p-4'>
+            <div className='flex items-center space-x-2'>
+              <MessageSquare className='h-5 w-5 text-blue-600' />
+              <div>
+                <p className='text-sm font-medium text-gray-900'>
+                  Total Activities
+                </p>
+                <p className='text-2xl font-bold text-blue-600'>
+                  {activities.length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className='p-4'>
+            <div className='flex items-center space-x-2'>
+              <User className='h-5 w-5 text-green-600' />
+              <div>
+                <p className='text-sm font-medium text-gray-900'>
+                  Contact Activities
+                </p>
+                <p className='text-2xl font-bold text-green-600'>
+                  {activities.filter((a) => a.entityType === 'contact').length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className='p-4'>
+            <div className='flex items-center space-x-2'>
+              <Settings className='h-5 w-5 text-orange-600' />
+              <div>
+                <p className='text-sm font-medium text-gray-900'>
+                  Admin Actions
+                </p>
+                <p className='text-2xl font-bold text-orange-600'>
+                  {activities.filter((a) => a.type === 'admin_action').length}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }
