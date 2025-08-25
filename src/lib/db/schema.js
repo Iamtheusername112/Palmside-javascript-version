@@ -89,3 +89,16 @@ export const contacts = pgTable('contacts', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 })
+
+// Response templates table
+export const responseTemplates = pgTable('response_templates', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  subject: text('subject').notNull(),
+  content: text('content').notNull(),
+  category: varchar('category', { length: 100 }).notNull().default('general'),
+  isDefault: boolean('is_default').default(false),
+  useCount: integer('use_count').default(0),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})

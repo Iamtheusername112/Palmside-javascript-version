@@ -17,6 +17,7 @@ import {
   EyeOff,
 } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
+import { emailService } from '@/lib/email-service'
 
 export function EmailComposer({ isOpen, onClose, template, contact, onSend }) {
   const { success, error } = useToast()
@@ -36,32 +37,26 @@ export function EmailComposer({ isOpen, onClose, template, contact, onSend }) {
 
       // Replace template variables with actual contact data
       const variables = {
-        '{{firstName}}': contact.firstName || '',
-        '{{lastName}}': contact.lastName || '',
-        '{{email}}': contact.email || '',
-        '{{phone}}': contact.phone || '',
-        '{{companyName}}': 'Palmside Real Estate',
-        '{{phoneNumber}}': '+1 (555) 123-4567',
-        '{{agentName}}': 'Your Agent Name',
-        '{{appointmentDate}}': new Date().toLocaleDateString(),
-        '{{appointmentTime}}': '10:00 AM',
-        '{{appointmentLocation}}': 'Office',
-        '{{appointmentDuration}}': '1 hour',
-        '{{propertyName}}': 'Sample Property',
-        '{{propertyDetails}}':
-          'Beautiful 3-bedroom home with modern amenities...',
+        firstName: contact.firstName || '',
+        lastName: contact.lastName || '',
+        email: contact.email || '',
+        phone: contact.phone || '',
+        companyName: 'Palmside Real Estate',
+        phoneNumber: '+1 (555) 123-4567',
+        agentName: 'Your Agent Name',
+        appointmentDate: new Date().toLocaleDateString(),
+        appointmentTime: '10:00 AM',
+        appointmentLocation: 'Office',
+        appointmentDuration: '1 hour',
+        propertyName: 'Sample Property',
+        propertyDetails: 'Beautiful 3-bedroom home with modern amenities...',
       }
 
       // Replace all variables in subject and content
       Object.entries(variables).forEach(([variable, value]) => {
-        populatedSubject = populatedSubject.replace(
-          new RegExp(variable, 'g'),
-          value
-        )
-        populatedContent = populatedContent.replace(
-          new RegExp(variable, 'g'),
-          value
-        )
+        const regex = new RegExp(`{{${variable}}}`, 'g')
+        populatedSubject = populatedSubject.replace(regex, value)
+        populatedContent = populatedContent.replace(regex, regex, value)
       })
 
       setEmailData({
@@ -81,20 +76,26 @@ export function EmailComposer({ isOpen, onClose, template, contact, onSend }) {
 
     setLoading(true)
     try {
-      // In a real app, this would send the actual email
-      // For now, we'll simulate the email sending
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Send email using the email service
+      const result = await emailService.sendEmail(emailData)
 
-      success('Email Sent', 'Email has been sent successfully')
+      if (result.success) {
+        success('Email Sent', result.message)
 
-      // Call the onSend callback if provided
-      if (onSend) {
-        onSend(emailData)
+        // Call the onSend callback if provided
+        if (onSend) {
+          onSend(emailData)
+        }
+
+        onClose()
+      } else {
+        throw new Error(result.message || 'Failed to send email')
       }
-
-      onClose()
     } catch (err) {
-      error('Send Failed', 'Failed to send email. Please try again.')
+      error(
+        'Send Failed',
+        err.message || 'Failed to send email. Please try again.'
+      )
     } finally {
       setLoading(false)
     }

@@ -17,68 +17,23 @@ import {
   Star,
 } from 'lucide-react'
 import { useToast } from '@/contexts/ToastContext'
+import { useTemplates } from '@/hooks/useTemplates'
+import { useContacts } from '@/hooks/useContacts'
 import { EmailComposer } from './EmailComposer'
-
-const defaultTemplates = [
-  {
-    id: 1,
-    name: 'General Inquiry Response',
-    subject: 'Thank you for your inquiry',
-    content: `Dear {{firstName}},
-
-Thank you for reaching out to us. We have received your inquiry and our team will review it shortly.
-
-We typically respond to inquiries within 24 hours during business days. If you have any urgent questions, please don't hesitate to call us at {{phoneNumber}}.
-
-Best regards,
-{{companyName}} Team`,
-    category: 'general',
-    isDefault: true,
-    useCount: 45,
-  },
-  {
-    id: 2,
-    name: 'Property Information Request',
-    subject: 'Property Information - {{propertyName}}',
-    content: `Dear {{firstName}},
-
-Thank you for your interest in {{propertyName}}. I'm happy to provide you with detailed information about this property.
-
-{{propertyDetails}}
-
-Please let me know if you would like to schedule a viewing or if you have any additional questions.
-
-Best regards,
-{{agentName}}
-{{companyName}}`,
-    category: 'property',
-    isDefault: true,
-    useCount: 32,
-  },
-  {
-    id: 3,
-    name: 'Appointment Confirmation',
-    subject: 'Appointment Confirmation - {{appointmentDate}}',
-    content: `Dear {{firstName}},
-
-This email confirms your appointment scheduled for {{appointmentDate}} at {{appointmentTime}}.
-
-Location: {{appointmentLocation}}
-Duration: {{appointmentDuration}}
-
-Please arrive 10 minutes before your scheduled time. If you need to reschedule or cancel, please contact us at least 24 hours in advance.
-
-Best regards,
-{{companyName}} Team`,
-    category: 'appointment',
-    isDefault: true,
-    useCount: 28,
-  },
-]
 
 export function ResponseTemplates() {
   const { success, error } = useToast()
-  const [templates, setTemplates] = useState(defaultTemplates)
+  const {
+    templates,
+    loading: templatesLoading,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+    incrementUsage,
+  } = useTemplates()
+
+  const { contacts, loading: contactsLoading } = useContacts()
+
   const [editingTemplate, setEditingTemplate] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [showEmailComposer, setShowEmailComposer] = useState(false)
@@ -115,26 +70,27 @@ export function ResponseTemplates() {
     },
   ]
 
-  const addTemplate = () => {
+  const addTemplate = async () => {
     if (!newTemplate.name || !newTemplate.subject || !newTemplate.content) {
       error('Missing Fields', 'Please fill in all required fields')
       return
     }
 
-    const template = {
-      id: Date.now(),
-      ...newTemplate,
-      isDefault: false,
-      useCount: 0,
+    try {
+      await createTemplate(newTemplate)
+      setNewTemplate({
+        name: '',
+        subject: '',
+        content: '',
+        category: 'general',
+      })
+      setShowForm(false)
+    } catch (err) {
+      // Error is already handled by the hook
     }
-
-    setTemplates((prev) => [...prev, template])
-    setNewTemplate({ name: '', subject: '', content: '', category: 'general' })
-    setShowForm(false)
-    success('Template Added', 'Response template created successfully')
   }
 
-  const updateTemplate = () => {
+  const updateTemplate = async () => {
     if (
       !editingTemplate.name ||
       !editingTemplate.subject ||
@@ -144,22 +100,20 @@ export function ResponseTemplates() {
       return
     }
 
-    setTemplates((prev) =>
-      prev.map((t) => (t.id === editingTemplate.id ? editingTemplate : t))
-    )
-    setEditingTemplate(null)
-    success('Template Updated', 'Response template updated successfully')
+    try {
+      await updateTemplate(editingTemplate.id, editingTemplate)
+      setEditingTemplate(null)
+    } catch (err) {
+      // Error is already handled by the hook
+    }
   }
 
-  const deleteTemplate = (id) => {
-    const template = templates.find((t) => t.id === id)
-    if (template.isDefault) {
-      error('Cannot Delete', 'Default templates cannot be deleted')
-      return
+  const handleDeleteTemplate = async (id) => {
+    try {
+      await deleteTemplate(id)
+    } catch (err) {
+      // Error is already handled by the hook
     }
-
-    setTemplates((prev) => prev.filter((t) => t.id !== id))
-    success('Template Deleted', 'Response template removed successfully')
   }
 
   const copyTemplate = (template) => {
@@ -168,27 +122,25 @@ export function ResponseTemplates() {
   }
 
   const useTemplate = (template) => {
-    // Set up a mock contact for demonstration
-    const mockContact = {
-      firstName: 'John',
-      lastName: 'Doe',
-      email: 'john@example.com',
-      phone: '+1 (555) 123-4567',
+    // Use real contact data from the database
+    if (contacts.length === 0) {
+      error('No Contacts', 'Please add some contacts before using templates')
+      return
     }
 
+    // For now, use the first contact as an example
+    // In a real app, you might want to show a contact selector
+    const contact = contacts[0]
+
     setSelectedTemplate(template)
-    setSelectedContact(mockContact)
+    setSelectedContact(contact)
     setShowEmailComposer(true)
   }
 
-  const handleEmailSent = (emailData) => {
+  const handleEmailSent = async (emailData) => {
     // Update template usage count
     if (selectedTemplate) {
-      setTemplates((prev) =>
-        prev.map((t) =>
-          t.id === selectedTemplate.id ? { ...t, useCount: t.useCount + 1 } : t
-        )
-      )
+      await incrementUsage(selectedTemplate.id)
     }
 
     // Reset state
@@ -206,6 +158,14 @@ export function ResponseTemplates() {
 
   const getCategoryLabel = (category) => {
     return categories.find((c) => c.value === category)?.label || 'Unknown'
+  }
+
+  if (templatesLoading || contactsLoading) {
+    return (
+      <div className='flex items-center justify-center h-64'>
+        <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
+      </div>
+    )
   }
 
   return (
@@ -488,7 +448,7 @@ export function ResponseTemplates() {
                       <Button
                         size='sm'
                         variant='outline'
-                        onClick={() => deleteTemplate(template.id)}
+                        onClick={() => handleDeleteTemplate(template.id)}
                       >
                         <Trash2 className='h-4 w-4' />
                       </Button>

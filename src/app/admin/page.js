@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useContactNotifications } from '@/hooks/useContactNotifications'
+import { useAdminStats } from '@/hooks/useAdminStats'
+import { useContacts } from '@/hooks/useContacts'
 import { ActivityFeed } from '@/components/admin/ActivityFeed'
 import { ContactAnalytics } from '@/components/admin/ContactAnalytics'
 import { ResponseTemplates } from '@/components/admin/ResponseTemplates'
@@ -25,54 +27,16 @@ import {
 
 export default function AdminDashboard() {
   const { notifications } = useContactNotifications()
+  const { stats, loading: statsLoading } = useAdminStats()
+  const { contacts, loading: contactsLoading } = useContacts(1, 5) // Get first 5 contacts
+
   const [activeTab, setActiveTab] = useState('overview')
-  const [quickStats, setQuickStats] = useState({
-    totalContacts: 1247,
-    newContacts: 23,
-    readContacts: 1189,
-    respondedContacts: 156,
-    avgResponseTime: '2.3h',
-    responseRate: 87.2,
-    todayContacts: 28,
-    weeklyGrowth: 12.5,
-  })
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'activity', label: 'Activity Feed', icon: Eye },
     { id: 'templates', label: 'Response Templates', icon: FileText },
-  ]
-
-  const recentContacts = [
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john@example.com',
-      status: 'new',
-      time: '2 min ago',
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      status: 'read',
-      time: '15 min ago',
-    },
-    {
-      id: 3,
-      name: 'Bob Johnson',
-      email: 'bob@example.com',
-      status: 'responded',
-      time: '1 hour ago',
-    },
-    {
-      id: 4,
-      name: 'Alice Brown',
-      email: 'alice@example.com',
-      status: 'new',
-      time: '2 hours ago',
-    },
   ]
 
   const getStatusBadge = (status) => {
@@ -102,10 +66,11 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className='text-2xl font-bold'>
-                    {quickStats.totalContacts.toLocaleString()}
+                    {statsLoading ? '...' : stats.totalContacts}
                   </div>
                   <p className='text-xs text-muted-foreground'>
-                    +{quickStats.weeklyGrowth}% from last week
+                    {stats.weeklyGrowth > 0 ? '+' : ''}
+                    {stats.weeklyGrowth}% from last week
                   </p>
                 </CardContent>
               </Card>
@@ -115,14 +80,14 @@ export default function AdminDashboard() {
                   <CardTitle className='text-sm font-medium'>
                     New Contacts
                   </CardTitle>
-                  <MessageSquare className='h-4 w-4 text-muted-foreground' />
+                  <AlertCircle className='h-4 w-4 text-muted-foreground' />
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold text-red-600'>
-                    {quickStats.newContacts}
+                  <div className='text-2xl font-bold'>
+                    {statsLoading ? '...' : stats.newContacts}
                   </div>
                   <p className='text-xs text-muted-foreground'>
-                    {quickStats.todayContacts} today
+                    {stats.todayContacts} today
                   </p>
                 </CardContent>
               </Card>
@@ -135,11 +100,11 @@ export default function AdminDashboard() {
                   <CheckCircle className='h-4 w-4 text-muted-foreground' />
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold text-green-600'>
-                    {quickStats.responseRate}%
+                  <div className='text-2xl font-bold'>
+                    {statsLoading ? '...' : stats.responseRate}%
                   </div>
                   <p className='text-xs text-muted-foreground'>
-                    Avg: {quickStats.avgResponseTime}
+                    Avg response time: {stats.avgResponseTime}
                   </p>
                 </CardContent>
               </Card>
@@ -147,92 +112,101 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
-                    Today's Activity
+                    Responded
                   </CardTitle>
-                  <Clock className='h-4 w-4 text-muted-foreground' />
+                  <MessageSquare className='h-4 w-4 text-muted-foreground' />
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold text-blue-600'>
-                    {quickStats.todayContacts}
+                  <div className='text-2xl font-bold'>
+                    {statsLoading ? '...' : stats.respondedContacts}
                   </div>
                   <p className='text-xs text-muted-foreground'>
-                    New contacts today
+                    {stats.readContacts} read
                   </p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Recent Activity & Quick Actions */}
-            <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
-              <Card>
-                <CardHeader>
-                  <CardTitle className='flex items-center justify-between'>
-                    <span>Recent Contacts</span>
-                    <Button variant='ghost' size='sm'>
-                      View All <ArrowRight className='h-4 w-4 ml-1' />
-                    </Button>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='space-y-3'>
-                    {recentContacts.map((contact) => (
+            {/* Recent Contacts */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Contacts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className='space-y-4'>
+                  {contactsLoading ? (
+                    <div className='flex items-center justify-center h-32'>
+                      <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600'></div>
+                    </div>
+                  ) : contacts.length > 0 ? (
+                    contacts.map((contact) => (
                       <div
                         key={contact.id}
-                        className='flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50'
+                        className='flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50'
                       >
                         <div className='flex items-center space-x-3'>
-                          <div className='w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center'>
-                            <span className='text-sm font-medium text-gray-600'>
-                              {contact.name.charAt(0)}
+                          <div className='w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center'>
+                            <span className='text-sm font-medium text-blue-600'>
+                              {contact.firstName?.[0]}
+                              {contact.lastName?.[0]}
                             </span>
                           </div>
                           <div>
-                            <p className='text-sm font-medium'>
-                              {contact.name}
+                            <p className='font-medium'>
+                              {contact.firstName} {contact.lastName}
                             </p>
-                            <p className='text-xs text-gray-500'>
+                            <p className='text-sm text-gray-500'>
                               {contact.email}
                             </p>
                           </div>
                         </div>
-                        <div className='flex items-center space-x-2'>
+                        <div className='flex items-center space-x-3'>
                           {getStatusBadge(contact.status)}
-                          <span className='text-xs text-gray-400'>
-                            {contact.time}
+                          <span className='text-sm text-gray-500'>
+                            {new Date(contact.createdAt).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                    ))
+                  ) : (
+                    <div className='text-center py-8 text-gray-500'>
+                      No contacts found
+                    </div>
+                  )}
+                  <Button className='w-full justify-start' variant='outline'>
+                    <ArrowRight className='h-4 w-4 mr-2' />
+                    View All Contacts
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className='space-y-3'>
-                    <Button className='w-full justify-start' variant='outline'>
-                      <Plus className='h-4 w-4 mr-2' />
-                      Add New Contact
-                    </Button>
-                    <Button className='w-full justify-start' variant='outline'>
-                      <MessageSquare className='h-4 w-4 mr-2' />
-                      Send Bulk Response
-                    </Button>
-                    <Button className='w-full justify-start' variant='outline'>
-                      <FileText className='h-4 w-4 mr-2' />
-                      Generate Report
-                    </Button>
-                    <Button className='w-full justify-start' variant='outline'>
-                      <Settings className='h-4 w-4 mr-2' />
-                      Manage Templates
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <Button className='w-full justify-start' variant='outline'>
+                    <Plus className='h-4 w-4 mr-2' />
+                    Add New Contact
+                  </Button>
+                  <Button className='w-full justify-start' variant='outline'>
+                    <MessageSquare className='h-4 w-4 mr-2' />
+                    Send Bulk Response
+                  </Button>
+                  <Button className='w-full justify-start' variant='outline'>
+                    <FileText className='h-4 w-4 mr-2' />
+                    Generate Report
+                  </Button>
+                  <Button className='w-full justify-start' variant='outline'>
+                    <Settings className='h-4 w-4 mr-2' />
+                    Manage Templates
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Notification Summary */}
             <Card>
