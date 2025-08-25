@@ -1,133 +1,129 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import PropertyCard from '@/components/PropertyCard'
-
 import { Button } from '@/components/ui/button'
-
-const allProperties = [
-  {
-    id: 1,
-    title: 'Modern Downtown Apartment',
-    location: 'Downtown, City Center',
-    price: 450000,
-    image:
-      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=500&h=400&fit=crop',
-    bedrooms: 2,
-    bathrooms: 2,
-    sqft: 1200,
-    type: 'Apartment',
-    status: 'For Sale',
-    rating: 4.8,
-    isFavorite: false,
-  },
-  {
-    id: 2,
-    title: 'Luxury Family Home',
-    location: 'Suburban Heights',
-    price: 850000,
-    image:
-      'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=500&h=400&fit=crop',
-    bedrooms: 4,
-    bathrooms: 3,
-    sqft: 2800,
-    type: 'House',
-    status: 'For Sale',
-    rating: 4.9,
-    isFavorite: true,
-  },
-  {
-    id: 3,
-    title: 'Cozy Studio Loft',
-    location: 'Arts District',
-    price: 1800,
-    image:
-      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=400&fit=crop',
-    bedrooms: 1,
-    bathrooms: 1,
-    sqft: 650,
-    type: 'Loft',
-    status: 'For Rent',
-    rating: 4.6,
-    isFavorite: false,
-  },
-  {
-    id: 4,
-    title: 'Waterfront Condo',
-    location: 'Harbor View',
-    price: 650000,
-    image:
-      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=500&h=400&fit=crop',
-    bedrooms: 3,
-    bathrooms: 2,
-    sqft: 1800,
-    type: 'Condo',
-    status: 'For Sale',
-    rating: 4.7,
-    isFavorite: false,
-  },
-  {
-    id: 5,
-    title: 'Historic Townhouse',
-    location: 'Old Town',
-    price: 720000,
-    image:
-      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=500&h=400&fit=crop',
-    bedrooms: 3,
-    bathrooms: 2.5,
-    sqft: 2200,
-    type: 'Townhouse',
-    status: 'For Sale',
-    rating: 4.5,
-    isFavorite: false,
-  },
-  {
-    id: 6,
-    title: 'Garden Apartment',
-    location: 'Park District',
-    price: 2200,
-    image:
-      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=500&h=400&fit=crop',
-    bedrooms: 2,
-    bathrooms: 1,
-    sqft: 950,
-    type: 'Apartment',
-    status: 'For Rent',
-    rating: 4.4,
-    isFavorite: false,
-  },
-  {
-    id: 7,
-    title: 'Mountain View Villa',
-    location: 'Highland Estates',
-    price: 1200000,
-    image:
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=500&h=400&fit=crop',
-    bedrooms: 5,
-    bathrooms: 4,
-    sqft: 3500,
-    type: 'Villa',
-    status: 'For Sale',
-    rating: 4.9,
-    isFavorite: false,
-  },
-  {
-    id: 8,
-    title: 'Urban Penthouse',
-    location: 'Skyline Tower',
-    price: 2800,
-    image:
-      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=500&h=400&fit=crop',
-    bedrooms: 2,
-    bathrooms: 2,
-    sqft: 1400,
-    type: 'Penthouse',
-    status: 'For Rent',
-    rating: 4.8,
-    isFavorite: false,
-  },
-]
+import { Loader2 } from 'lucide-react'
 
 export default function PropertiesPage() {
+  const [properties, setProperties] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [hasMore, setHasMore] = useState(true)
+  const [page, setPage] = useState(1)
+  const [loadingMore, setLoadingMore] = useState(false)
+
+  // Fetch properties from the API
+  const fetchProperties = async (pageNum = 1, append = false) => {
+    try {
+      setLoadingMore(pageNum > 1)
+      const response = await fetch(`/api/properties?page=${pageNum}&limit=12`)
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch properties')
+      }
+
+      const data = await response.json()
+
+      if (append) {
+        setProperties((prev) => [...prev, ...data.properties])
+      } else {
+        setProperties(data.properties)
+      }
+
+      setHasMore(data.pagination.page < data.pagination.pages)
+      setPage(pageNum)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+      setLoadingMore(false)
+    }
+  }
+
+  // Load more properties
+  const loadMore = () => {
+    if (!loadingMore && hasMore) {
+      fetchProperties(page + 1, true)
+    }
+  }
+
+  // Initial load
+  useEffect(() => {
+    fetchProperties()
+  }, [])
+
+  // Show loading state
+  if (loading) {
+    return (
+      <main className='min-h-screen'>
+        <Header />
+        <section className='bg-gradient-to-br from-blue-50 to-purple-50 py-20'>
+          <div className='container mx-auto px-4 text-center'>
+            <h1 className='text-4xl md:text-6xl font-bold text-gray-900 mb-6'>
+              Find Your Perfect <span className='text-primary'>Property</span>
+            </h1>
+            <p className='text-xl text-gray-600 max-w-3xl mx-auto'>
+              Browse through our extensive collection of properties for sale and
+              rent. From cozy apartments to luxury homes, we have something for
+              everyone.
+            </p>
+          </div>
+        </section>
+
+        <section className='py-16 bg-gray-50'>
+          <div className='container mx-auto px-4 text-center'>
+            <div className='flex justify-center items-center py-20'>
+              <Loader2 className='w-8 h-8 animate-spin text-primary' />
+              <span className='ml-2 text-lg text-gray-600'>
+                Loading properties...
+              </span>
+            </div>
+          </div>
+        </section>
+        <Footer />
+      </main>
+    )
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <main className='min-h-screen'>
+        <Header />
+        <section className='bg-gradient-to-br from-blue-50 to-purple-50 py-20'>
+          <div className='container mx-auto px-4 text-center'>
+            <h1 className='text-4xl md:text-6xl font-bold text-gray-900 mb-6'>
+              Find Your Perfect <span className='text-primary'>Property</span>
+            </h1>
+            <p className='text-xl text-gray-600 max-w-3xl mx-auto'>
+              Browse through our extensive collection of properties for sale and
+              rent. From cozy apartments to luxury homes, we have something for
+              everyone.
+            </p>
+          </div>
+        </section>
+
+        <section className='py-16 bg-gray-50'>
+          <div className='container mx-auto px-4 text-center'>
+            <div className='py-20'>
+              <h2 className='text-2xl font-bold text-red-600 mb-4'>
+                Error Loading Properties
+              </h2>
+              <p className='text-gray-600 mb-6'>{error}</p>
+              <Button onClick={() => fetchProperties()} variant='outline'>
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </section>
+        <Footer />
+      </main>
+    )
+  }
+
   return (
     <main className='min-h-screen'>
       <Header />
@@ -151,22 +147,49 @@ export default function PropertiesPage() {
         <div className='container mx-auto px-4'>
           <div className='flex justify-between items-center mb-8'>
             <h2 className='text-2xl font-bold text-gray-900'>
-              Available Properties ({allProperties.length})
+              Available Properties ({properties.length})
             </h2>
           </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
-            {allProperties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))}
-          </div>
+          {properties.length > 0 ? (
+            <>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'>
+                {properties.map((property) => (
+                  <PropertyCard key={property.id} property={property} />
+                ))}
+              </div>
 
-          {/* Load More */}
-          <div className='text-center mt-12'>
-            <Button size='lg' variant='outline'>
-              Load More Properties
-            </Button>
-          </div>
+              {/* Load More */}
+              {hasMore && (
+                <div className='text-center mt-12'>
+                  <Button
+                    size='lg'
+                    variant='outline'
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 className='w-4 h-4 mr-2 animate-spin' />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load More Properties'
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className='text-center py-20'>
+              <h3 className='text-xl font-semibold text-gray-600 mb-2'>
+                No Properties Available
+              </h3>
+              <p className='text-gray-500'>
+                Check back later for new listings!
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
