@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Card,
   CardContent,
@@ -22,8 +22,7 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
-import { useToast } from '@/contexts/ToastContext'
+import { useSettings } from '@/hooks/useSettings'
 import {
   Settings,
   Save,
@@ -55,160 +54,46 @@ import {
 } from 'lucide-react'
 
 export default function SettingsPage() {
-  const { success, error } = useToast()
-  const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
-
-  // General Settings
-  const [generalSettings, setGeneralSettings] = useState({
-    companyName: 'Palmside Real Estate',
-    companyEmail: 'admin@palmside.com',
-    companyPhone: '+1 (555) 123-4567',
-    companyAddress: '123 Main Street, City, State 12345',
-    websiteUrl: 'https://palmside.com',
-    timezone: 'America/New_York',
-    dateFormat: 'MM/DD/YYYY',
-    currency: 'USD',
-    language: 'en',
-  })
-
-  // Email Settings
-  const [emailSettings, setEmailSettings] = useState({
-    smtpHost: 'smtp.gmail.com',
-    smtpPort: '587',
-    smtpUsername: 'noreply@palmside.com',
-    smtpPassword: '',
-    fromEmail: 'noreply@palmside.com',
-    fromName: 'Palmside Real Estate',
-    replyToEmail: 'support@palmside.com',
-    emailSignature: 'Best regards,\nPalmside Real Estate Team',
-  })
-
-  // Notification Settings
-  const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
-    contactAlerts: true,
-    propertyUpdates: true,
-    systemAlerts: true,
-    marketingEmails: false,
-    dailyDigest: true,
-    weeklyReport: true,
-    instantAlerts: true,
-  })
-
-  // Security Settings
-  const [securitySettings, setSecuritySettings] = useState({
-    twoFactorAuth: true,
-    sessionTimeout: 30,
-    passwordExpiry: 90,
-    failedLoginAttempts: 5,
-    ipWhitelist: '',
-    auditLogging: true,
-    dataEncryption: true,
-    backupFrequency: 'daily',
-  })
-
-  // Display Settings
-  const [displaySettings, setDisplaySettings] = useState({
-    theme: 'light',
-    sidebarCollapsed: false,
-    compactMode: false,
-    showWelcomeMessage: true,
-    dashboardLayout: 'grid',
-    itemsPerPage: 20,
-    autoRefresh: true,
-    refreshInterval: 30,
-  })
-
-  // Integration Settings
-  const [integrationSettings, setIntegrationSettings] = useState({
-    googleAnalytics: true,
-    googleMaps: true,
-    socialMedia: true,
-    crmIntegration: false,
-    paymentGateway: 'stripe',
-    calendarSync: true,
-    fileStorage: 'local',
-  })
-
-  // Backup & Export Settings
-  const [backupSettings, setBackupSettings] = useState({
-    autoBackup: true,
-    backupTime: '02:00',
-    backupRetention: 30,
-    includeFiles: true,
-    includeDatabase: true,
-    cloudBackup: false,
-    exportFormat: 'json',
-  })
+  const {
+    settings,
+    loading,
+    saving,
+    saveSettings,
+    testEmail,
+    createBackup,
+    exportData,
+    updateSetting,
+    resetSettings,
+  } = useSettings()
 
   const handleSave = async (section) => {
-    setSaving(true)
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Here you would make actual API calls to save settings
-      console.log(`Saving ${section} settings...`)
-
-      success(
-        'Settings Saved',
-        `${section} settings have been saved successfully!`
-      )
-    } catch (err) {
-      error('Save Failed', `Failed to save ${section} settings: ${err.message}`)
-    } finally {
-      setSaving(false)
+    const success = await saveSettings(section)
+    if (success) {
+      console.log(`${section} settings saved successfully`)
     }
-  }
-
-  const handleReset = (section) => {
-    // Reset settings to defaults
-    console.log(`Resetting ${section} settings...`)
-    success(
-      'Settings Reset',
-      `${section} settings have been reset to defaults!`
-    )
   }
 
   const handleTestEmail = async () => {
-    setLoading(true)
-    try {
-      // Simulate email test
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      success('Email Test', 'Test email sent successfully! Check your inbox.')
-    } catch (err) {
-      error(
-        'Email Test Failed',
-        'Failed to send test email. Please check your settings.'
-      )
-    } finally {
-      setLoading(false)
-    }
+    await testEmail(settings.email)
   }
 
   const handleBackup = async () => {
-    setLoading(true)
-    try {
-      // Simulate backup process
-      await new Promise((resolve) => setTimeout(resolve, 3000))
-      success('Backup Complete', 'System backup completed successfully!')
-    } catch (err) {
-      error('Backup Failed', 'Failed to create backup. Please try again.')
-    } finally {
-      setLoading(false)
+    const result = await createBackup(settings.backup)
+    if (result) {
+      console.log('Backup created:', result)
     }
   }
 
-  const handleExport = (format) => {
-    // Implement data export
-    console.log(`Exporting data in ${format} format`)
-    success(
-      'Export Started',
-      `Data export in ${format.toUpperCase()} format has started!`
-    )
+  const handleExport = async (format) => {
+    await exportData(format, {
+      includeProperties: true,
+      includeContacts: true,
+      includeTemplates: true,
+    })
+  }
+
+  const handleReset = (section) => {
+    resetSettings(section)
   }
 
   return (
@@ -222,7 +107,7 @@ export default function SettingsPage() {
           </p>
         </div>
         <div className='flex space-x-3'>
-          <Button variant='outline' onClick={() => window.location.reload()}>
+          <Button variant='outline' onClick={() => handleReset('all')}>
             <RefreshCw className='w-4 h-4 mr-2' />
             Reset All
           </Button>
@@ -263,12 +148,9 @@ export default function SettingsPage() {
                   <Label htmlFor='companyName'>Company Name</Label>
                   <Input
                     id='companyName'
-                    value={generalSettings.companyName}
+                    value={settings.general.companyName}
                     onChange={(e) =>
-                      setGeneralSettings((prev) => ({
-                        ...prev,
-                        companyName: e.target.value,
-                      }))
+                      updateSetting('general', 'companyName', e.target.value)
                     }
                     placeholder='Enter company name'
                   />
@@ -278,12 +160,9 @@ export default function SettingsPage() {
                   <Input
                     id='companyEmail'
                     type='email'
-                    value={generalSettings.companyEmail}
+                    value={settings.general.companyEmail}
                     onChange={(e) =>
-                      setGeneralSettings((prev) => ({
-                        ...prev,
-                        companyEmail: e.target.value,
-                      }))
+                      updateSetting('general', 'companyEmail', e.target.value)
                     }
                     placeholder='Enter company email'
                   />
@@ -292,12 +171,9 @@ export default function SettingsPage() {
                   <Label htmlFor='companyPhone'>Company Phone</Label>
                   <Input
                     id='companyPhone'
-                    value={generalSettings.companyPhone}
+                    value={settings.general.companyPhone}
                     onChange={(e) =>
-                      setGeneralSettings((prev) => ({
-                        ...prev,
-                        companyPhone: e.target.value,
-                      }))
+                      updateSetting('general', 'companyPhone', e.target.value)
                     }
                     placeholder='Enter company phone'
                   />
@@ -306,12 +182,9 @@ export default function SettingsPage() {
                   <Label htmlFor='websiteUrl'>Website URL</Label>
                   <Input
                     id='websiteUrl'
-                    value={generalSettings.websiteUrl}
+                    value={settings.general.websiteUrl}
                     onChange={(e) =>
-                      setGeneralSettings((prev) => ({
-                        ...prev,
-                        websiteUrl: e.target.value,
-                      }))
+                      updateSetting('general', 'websiteUrl', e.target.value)
                     }
                     placeholder='Enter website URL'
                   />
@@ -322,12 +195,9 @@ export default function SettingsPage() {
                 <Label htmlFor='companyAddress'>Company Address</Label>
                 <Textarea
                   id='companyAddress'
-                  value={generalSettings.companyAddress}
+                  value={settings.general.companyAddress}
                   onChange={(e) =>
-                    setGeneralSettings((prev) => ({
-                      ...prev,
-                      companyAddress: e.target.value,
-                    }))
+                    updateSetting('general', 'companyAddress', e.target.value)
                   }
                   placeholder='Enter company address'
                   rows={3}
@@ -338,12 +208,9 @@ export default function SettingsPage() {
                 <div className='space-y-2'>
                   <Label htmlFor='timezone'>Timezone</Label>
                   <Select
-                    value={generalSettings.timezone}
+                    value={settings.general.timezone}
                     onValueChange={(value) =>
-                      setGeneralSettings((prev) => ({
-                        ...prev,
-                        timezone: value,
-                      }))
+                      updateSetting('general', 'timezone', value)
                     }
                   >
                     <SelectTrigger>
@@ -369,12 +236,9 @@ export default function SettingsPage() {
                 <div className='space-y-2'>
                   <Label htmlFor='dateFormat'>Date Format</Label>
                   <Select
-                    value={generalSettings.dateFormat}
+                    value={settings.general.dateFormat}
                     onValueChange={(value) =>
-                      setGeneralSettings((prev) => ({
-                        ...prev,
-                        dateFormat: value,
-                      }))
+                      updateSetting('general', 'dateFormat', value)
                     }
                   >
                     <SelectTrigger>
@@ -391,12 +255,9 @@ export default function SettingsPage() {
                 <div className='space-y-2'>
                   <Label htmlFor='currency'>Currency</Label>
                   <Select
-                    value={generalSettings.currency}
+                    value={settings.general.currency}
                     onValueChange={(value) =>
-                      setGeneralSettings((prev) => ({
-                        ...prev,
-                        currency: value,
-                      }))
+                      updateSetting('general', 'currency', value)
                     }
                   >
                     <SelectTrigger>
@@ -446,12 +307,9 @@ export default function SettingsPage() {
                   <Label htmlFor='smtpHost'>SMTP Host</Label>
                   <Input
                     id='smtpHost'
-                    value={emailSettings.smtpHost}
+                    value={settings.email.smtpHost}
                     onChange={(e) =>
-                      setEmailSettings((prev) => ({
-                        ...prev,
-                        smtpHost: e.target.value,
-                      }))
+                      updateSetting('email', 'smtpHost', e.target.value)
                     }
                     placeholder='smtp.gmail.com'
                   />
@@ -460,12 +318,9 @@ export default function SettingsPage() {
                   <Label htmlFor='smtpPort'>SMTP Port</Label>
                   <Input
                     id='smtpPort'
-                    value={emailSettings.smtpPort}
+                    value={settings.email.smtpPort}
                     onChange={(e) =>
-                      setEmailSettings((prev) => ({
-                        ...prev,
-                        smtpPort: e.target.value,
-                      }))
+                      updateSetting('email', 'smtpPort', e.target.value)
                     }
                     placeholder='587'
                   />
@@ -474,12 +329,9 @@ export default function SettingsPage() {
                   <Label htmlFor='smtpUsername'>SMTP Username</Label>
                   <Input
                     id='smtpUsername'
-                    value={emailSettings.smtpUsername}
+                    value={settings.email.smtpUsername}
                     onChange={(e) =>
-                      setEmailSettings((prev) => ({
-                        ...prev,
-                        smtpUsername: e.target.value,
-                      }))
+                      updateSetting('email', 'smtpUsername', e.target.value)
                     }
                     placeholder='Enter SMTP username'
                   />
@@ -489,12 +341,9 @@ export default function SettingsPage() {
                   <Input
                     id='smtpPassword'
                     type='password'
-                    value={emailSettings.smtpPassword}
+                    value={settings.email.smtpPassword}
                     onChange={(e) =>
-                      setEmailSettings((prev) => ({
-                        ...prev,
-                        smtpPassword: e.target.value,
-                      }))
+                      updateSetting('email', 'smtpPassword', e.target.value)
                     }
                     placeholder='Enter SMTP password'
                   />
@@ -507,12 +356,9 @@ export default function SettingsPage() {
                   <Input
                     id='fromEmail'
                     type='email'
-                    value={emailSettings.fromEmail}
+                    value={settings.email.fromEmail}
                     onChange={(e) =>
-                      setEmailSettings((prev) => ({
-                        ...prev,
-                        fromEmail: e.target.value,
-                      }))
+                      updateSetting('email', 'fromEmail', e.target.value)
                     }
                     placeholder='noreply@company.com'
                   />
@@ -521,12 +367,9 @@ export default function SettingsPage() {
                   <Label htmlFor='fromName'>From Name</Label>
                   <Input
                     id='fromName'
-                    value={emailSettings.fromName}
+                    value={settings.email.fromName}
                     onChange={(e) =>
-                      setEmailSettings((prev) => ({
-                        ...prev,
-                        fromName: e.target.value,
-                      }))
+                      updateSetting('email', 'fromName', e.target.value)
                     }
                     placeholder='Company Name'
                   />
@@ -537,12 +380,9 @@ export default function SettingsPage() {
                 <Label htmlFor='emailSignature'>Email Signature</Label>
                 <Textarea
                   id='emailSignature'
-                  value={emailSettings.emailSignature}
+                  value={settings.email.emailSignature}
                   onChange={(e) =>
-                    setEmailSettings((prev) => ({
-                      ...prev,
-                      emailSignature: e.target.value,
-                    }))
+                    updateSetting('email', 'emailSignature', e.target.value)
                   }
                   placeholder='Enter email signature'
                   rows={4}
@@ -598,12 +438,9 @@ export default function SettingsPage() {
                       <span>Email Notifications</span>
                     </div>
                     <Switch
-                      checked={notificationSettings.emailNotifications}
+                      checked={settings.notifications.emailNotifications}
                       onCheckedChange={(checked) =>
-                        setNotificationSettings((prev) => ({
-                          ...prev,
-                          emailNotifications: checked,
-                        }))
+                        updateSetting('notifications', 'emailNotifications', checked)
                       }
                     />
                   </div>
@@ -614,12 +451,9 @@ export default function SettingsPage() {
                       <span>SMS Notifications</span>
                     </div>
                     <Switch
-                      checked={notificationSettings.smsNotifications}
+                      checked={settings.notifications.smsNotifications}
                       onCheckedChange={(checked) =>
-                        setNotificationSettings((prev) => ({
-                          ...prev,
-                          smsNotifications: checked,
-                        }))
+                        updateSetting('notifications', 'smsNotifications', checked)
                       }
                     />
                   </div>
@@ -630,12 +464,9 @@ export default function SettingsPage() {
                       <span>Push Notifications</span>
                     </div>
                     <Switch
-                      checked={notificationSettings.pushNotifications}
+                      checked={settings.notifications.pushNotifications}
                       onCheckedChange={(checked) =>
-                        setNotificationSettings((prev) => ({
-                          ...prev,
-                          pushNotifications: checked,
-                        }))
+                        updateSetting('notifications', 'pushNotifications', checked)
                       }
                     />
                   </div>
@@ -651,36 +482,27 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Contact Alerts</span>
                       <Switch
-                        checked={notificationSettings.contactAlerts}
+                        checked={settings.notifications.contactAlerts}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings((prev) => ({
-                            ...prev,
-                            contactAlerts: checked,
-                          }))
+                          updateSetting('notifications', 'contactAlerts', checked)
                         }
                       />
                     </div>
                     <div className='flex items-center justify-between'>
                       <span>Property Updates</span>
                       <Switch
-                        checked={notificationSettings.propertyUpdates}
+                        checked={settings.notifications.propertyUpdates}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings((prev) => ({
-                            ...prev,
-                            propertyUpdates: checked,
-                          }))
+                          updateSetting('notifications', 'propertyUpdates', checked)
                         }
                       />
                     </div>
                     <div className='flex items-center justify-between'>
                       <span>System Alerts</span>
                       <Switch
-                        checked={notificationSettings.systemAlerts}
+                        checked={settings.notifications.systemAlerts}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings((prev) => ({
-                            ...prev,
-                            systemAlerts: checked,
-                          }))
+                          updateSetting('notifications', 'systemAlerts', checked)
                         }
                       />
                     </div>
@@ -690,36 +512,27 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Daily Digest</span>
                       <Switch
-                        checked={notificationSettings.dailyDigest}
+                        checked={settings.notifications.dailyDigest}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings((prev) => ({
-                            ...prev,
-                            dailyDigest: checked,
-                          }))
+                          updateSetting('notifications', 'dailyDigest', checked)
                         }
                       />
                     </div>
                     <div className='flex items-center justify-between'>
                       <span>Weekly Report</span>
                       <Switch
-                        checked={notificationSettings.weeklyReport}
+                        checked={settings.notifications.weeklyReport}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings((prev) => ({
-                            ...prev,
-                            weeklyReport: checked,
-                          }))
+                          updateSetting('notifications', 'weeklyReport', checked)
                         }
                       />
                     </div>
                     <div className='flex items-center justify-between'>
                       <span>Instant Alerts</span>
                       <Switch
-                        checked={notificationSettings.instantAlerts}
+                        checked={settings.notifications.instantAlerts}
                         onCheckedChange={(checked) =>
-                          setNotificationSettings((prev) => ({
-                            ...prev,
-                            instantAlerts: checked,
-                          }))
+                          updateSetting('notifications', 'instantAlerts', checked)
                         }
                       />
                     </div>
@@ -768,12 +581,9 @@ export default function SettingsPage() {
                       <span>Two-Factor Authentication</span>
                     </div>
                     <Switch
-                      checked={securitySettings.twoFactorAuth}
+                      checked={settings.security.twoFactorAuth}
                       onCheckedChange={(checked) =>
-                        setSecuritySettings((prev) => ({
-                          ...prev,
-                          twoFactorAuth: checked,
-                        }))
+                        updateSetting('security', 'twoFactorAuth', checked)
                       }
                     />
                   </div>
@@ -784,12 +594,9 @@ export default function SettingsPage() {
                       <span>Session Timeout (minutes)</span>
                     </div>
                     <Select
-                      value={securitySettings.sessionTimeout.toString()}
+                      value={settings.security.sessionTimeout.toString()}
                       onValueChange={(value) =>
-                        setSecuritySettings((prev) => ({
-                          ...prev,
-                          sessionTimeout: parseInt(value),
-                        }))
+                        updateSetting('security', 'sessionTimeout', parseInt(value))
                       }
                     >
                       <SelectTrigger className='w-32'>
@@ -814,12 +621,9 @@ export default function SettingsPage() {
                   <div className='flex items-center justify-between'>
                     <span>Password Expiry (days)</span>
                     <Select
-                      value={securitySettings.passwordExpiry.toString()}
+                      value={settings.security.passwordExpiry.toString()}
                       onValueChange={(value) =>
-                        setSecuritySettings((prev) => ({
-                          ...prev,
-                          passwordExpiry: parseInt(value),
-                        }))
+                        updateSetting('security', 'passwordExpiry', parseInt(value))
                       }
                     >
                       <SelectTrigger className='w-32'>
@@ -837,12 +641,9 @@ export default function SettingsPage() {
                   <div className='flex items-center justify-between'>
                     <span>Failed Login Attempts</span>
                     <Select
-                      value={securitySettings.failedLoginAttempts.toString()}
+                      value={settings.security.failedLoginAttempts.toString()}
                       onValueChange={(value) =>
-                        setSecuritySettings((prev) => ({
-                          ...prev,
-                          failedLoginAttempts: parseInt(value),
-                        }))
+                        updateSetting('security', 'failedLoginAttempts', parseInt(value))
                       }
                     >
                       <SelectTrigger className='w-32'>
@@ -866,12 +667,9 @@ export default function SettingsPage() {
                   <div className='flex items-center justify-between'>
                     <span>Audit Logging</span>
                     <Switch
-                      checked={securitySettings.auditLogging}
+                      checked={settings.security.auditLogging}
                       onCheckedChange={(checked) =>
-                        setSecuritySettings((prev) => ({
-                          ...prev,
-                          auditLogging: checked,
-                        }))
+                        updateSetting('security', 'auditLogging', checked)
                       }
                     />
                   </div>
@@ -879,12 +677,9 @@ export default function SettingsPage() {
                   <div className='flex items-center justify-between'>
                     <span>Data Encryption</span>
                     <Switch
-                      checked={securitySettings.dataEncryption}
+                      checked={settings.security.dataEncryption}
                       onCheckedChange={(checked) =>
-                        setSecuritySettings((prev) => ({
-                          ...prev,
-                          dataEncryption: checked,
-                        }))
+                        updateSetting('security', 'dataEncryption', checked)
                       }
                     />
                   </div>
@@ -892,12 +687,9 @@ export default function SettingsPage() {
                   <div className='flex items-center justify-between'>
                     <span>Backup Frequency</span>
                     <Select
-                      value={securitySettings.backupFrequency}
+                      value={settings.security.backupFrequency}
                       onValueChange={(value) =>
-                        setSecuritySettings((prev) => ({
-                          ...prev,
-                          backupFrequency: value,
-                        }))
+                        updateSetting('security', 'backupFrequency', value)
                       }
                     >
                       <SelectTrigger className='w-32'>
@@ -952,12 +744,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Theme</span>
                       <Select
-                        value={displaySettings.theme}
+                        value={settings.display.theme}
                         onValueChange={(value) =>
-                          setDisplaySettings((prev) => ({
-                            ...prev,
-                            theme: value,
-                          }))
+                          updateSetting('display', 'theme', value)
                         }
                       >
                         <SelectTrigger className='w-32'>
@@ -974,12 +763,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Compact Mode</span>
                       <Switch
-                        checked={displaySettings.compactMode}
+                        checked={settings.display.compactMode}
                         onCheckedChange={(checked) =>
-                          setDisplaySettings((prev) => ({
-                            ...prev,
-                            compactMode: checked,
-                          }))
+                          updateSetting('display', 'compactMode', checked)
                         }
                       />
                     </div>
@@ -987,12 +773,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Show Welcome Message</span>
                       <Switch
-                        checked={displaySettings.showWelcomeMessage}
+                        checked={settings.display.showWelcomeMessage}
                         onCheckedChange={(checked) =>
-                          setDisplaySettings((prev) => ({
-                            ...prev,
-                            showWelcomeMessage: checked,
-                          }))
+                          updateSetting('display', 'showWelcomeMessage', checked)
                         }
                       />
                     </div>
@@ -1005,12 +788,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Layout Style</span>
                       <Select
-                        value={displaySettings.dashboardLayout}
+                        value={settings.display.dashboardLayout}
                         onValueChange={(value) =>
-                          setDisplaySettings((prev) => ({
-                            ...prev,
-                            dashboardLayout: value,
-                          }))
+                          updateSetting('display', 'dashboardLayout', value)
                         }
                       >
                         <SelectTrigger className='w-32'>
@@ -1027,12 +807,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Items Per Page</span>
                       <Select
-                        value={displaySettings.itemsPerPage.toString()}
+                        value={settings.display.itemsPerPage.toString()}
                         onValueChange={(value) =>
-                          setDisplaySettings((prev) => ({
-                            ...prev,
-                            itemsPerPage: parseInt(value),
-                          }))
+                          updateSetting('display', 'itemsPerPage', parseInt(value))
                         }
                       >
                         <SelectTrigger className='w-32'>
@@ -1058,26 +835,20 @@ export default function SettingsPage() {
                   <div className='flex items-center justify-between'>
                     <span>Enable Auto-Refresh</span>
                     <Switch
-                      checked={displaySettings.autoRefresh}
+                      checked={settings.display.autoRefresh}
                       onCheckedChange={(checked) =>
-                        setDisplaySettings((prev) => ({
-                          ...prev,
-                          autoRefresh: checked,
-                        }))
+                        updateSetting('display', 'autoRefresh', checked)
                       }
                     />
                   </div>
 
-                  {displaySettings.autoRefresh && (
+                  {settings.display.autoRefresh && (
                     <div className='flex items-center justify-between'>
                       <span>Refresh Interval (seconds)</span>
                       <Select
-                        value={displaySettings.refreshInterval.toString()}
+                        value={settings.display.refreshInterval.toString()}
                         onValueChange={(value) =>
-                          setDisplaySettings((prev) => ({
-                            ...prev,
-                            refreshInterval: parseInt(value),
-                          }))
+                          updateSetting('display', 'refreshInterval', parseInt(value))
                         }
                       >
                         <SelectTrigger className='w-32'>
@@ -1131,12 +902,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Google Analytics</span>
                       <Switch
-                        checked={integrationSettings.googleAnalytics}
+                        checked={settings.integrations.googleAnalytics}
                         onCheckedChange={(checked) =>
-                          setIntegrationSettings((prev) => ({
-                            ...prev,
-                            googleAnalytics: checked,
-                          }))
+                          updateSetting('integrations', 'googleAnalytics', checked)
                         }
                       />
                     </div>
@@ -1144,12 +912,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Google Maps</span>
                       <Switch
-                        checked={integrationSettings.googleMaps}
+                        checked={settings.integrations.googleMaps}
                         onCheckedChange={(checked) =>
-                          setIntegrationSettings((prev) => ({
-                            ...prev,
-                            googleMaps: checked,
-                          }))
+                          updateSetting('integrations', 'googleMaps', checked)
                         }
                       />
                     </div>
@@ -1157,12 +922,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Social Media</span>
                       <Switch
-                        checked={integrationSettings.socialMedia}
+                        checked={settings.integrations.socialMedia}
                         onCheckedChange={(checked) =>
-                          setIntegrationSettings((prev) => ({
-                            ...prev,
-                            socialMedia: checked,
-                          }))
+                          updateSetting('integrations', 'socialMedia', checked)
                         }
                       />
                     </div>
@@ -1175,12 +937,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>CRM Integration</span>
                       <Switch
-                        checked={integrationSettings.crmIntegration}
+                        checked={settings.integrations.crmIntegration}
                         onCheckedChange={(checked) =>
-                          setIntegrationSettings((prev) => ({
-                            ...prev,
-                            crmIntegration: checked,
-                          }))
+                          updateSetting('integrations', 'crmIntegration', checked)
                         }
                       />
                     </div>
@@ -1188,12 +947,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Calendar Sync</span>
                       <Switch
-                        checked={integrationSettings.calendarSync}
+                        checked={settings.integrations.calendarSync}
                         onCheckedChange={(checked) =>
-                          setIntegrationSettings((prev) => ({
-                            ...prev,
-                            calendarSync: checked,
-                          }))
+                          updateSetting('integrations', 'calendarSync', checked)
                         }
                       />
                     </div>
@@ -1201,12 +957,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Payment Gateway</span>
                       <Select
-                        value={integrationSettings.paymentGateway}
+                        value={settings.integrations.paymentGateway}
                         onValueChange={(value) =>
-                          setIntegrationSettings((prev) => ({
-                            ...prev,
-                            paymentGateway: value,
-                          }))
+                          updateSetting('integrations', 'paymentGateway', value)
                         }
                       >
                         <SelectTrigger className='w-32'>
@@ -1263,28 +1016,22 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Enable Auto-Backup</span>
                       <Switch
-                        checked={backupSettings.autoBackup}
+                        checked={settings.backup.autoBackup}
                         onCheckedChange={(checked) =>
-                          setBackupSettings((prev) => ({
-                            ...prev,
-                            autoBackup: checked,
-                          }))
+                          updateSetting('backup', 'autoBackup', checked)
                         }
                       />
                     </div>
 
-                    {backupSettings.autoBackup && (
+                    {settings.backup.autoBackup && (
                       <>
                         <div className='flex items-center justify-between'>
                           <span>Backup Time</span>
                           <Input
                             type='time'
-                            value={backupSettings.backupTime}
+                            value={settings.backup.backupTime}
                             onChange={(e) =>
-                              setBackupSettings((prev) => ({
-                                ...prev,
-                                backupTime: e.target.value,
-                              }))
+                              updateSetting('backup', 'backupTime', e.target.value)
                             }
                             className='w-32'
                           />
@@ -1293,12 +1040,9 @@ export default function SettingsPage() {
                         <div className='flex items-center justify-between'>
                           <span>Retention (days)</span>
                           <Select
-                            value={backupSettings.backupRetention.toString()}
+                            value={settings.backup.backupRetention.toString()}
                             onValueChange={(value) =>
-                              setBackupSettings((prev) => ({
-                                ...prev,
-                                backupRetention: parseInt(value),
-                              }))
+                              updateSetting('backup', 'backupRetention', parseInt(value))
                             }
                           >
                             <SelectTrigger className='w-32'>
@@ -1323,12 +1067,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Include Files</span>
                       <Switch
-                        checked={backupSettings.includeFiles}
+                        checked={settings.backup.includeFiles}
                         onCheckedChange={(checked) =>
-                          setBackupSettings((prev) => ({
-                            ...prev,
-                            includeFiles: checked,
-                          }))
+                          updateSetting('backup', 'includeFiles', checked)
                         }
                       />
                     </div>
@@ -1336,12 +1077,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Include Database</span>
                       <Switch
-                        checked={backupSettings.includeDatabase}
+                        checked={settings.backup.includeDatabase}
                         onCheckedChange={(checked) =>
-                          setBackupSettings((prev) => ({
-                            ...prev,
-                            includeDatabase: checked,
-                          }))
+                          updateSetting('backup', 'includeDatabase', checked)
                         }
                       />
                     </div>
@@ -1349,12 +1087,9 @@ export default function SettingsPage() {
                     <div className='flex items-center justify-between'>
                       <span>Cloud Backup</span>
                       <Switch
-                        checked={backupSettings.cloudBackup}
+                        checked={settings.backup.cloudBackup}
                         onCheckedChange={(checked) =>
-                          setBackupSettings((prev) => ({
-                            ...prev,
-                            cloudBackup: checked,
-                          }))
+                          updateSetting('backup', 'cloudBackup', checked)
                         }
                       />
                     </div>

@@ -2,6 +2,7 @@
   "name": "palmside-javascript",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,7 +11,7 @@
     "db:setup": "node scripts/setup-db.js",
     "db:simple": "node scripts/simple-db-setup.js",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
+    "db:push": "drizzle-kit push:pg",
     "db:studio": "drizzle-kit studio",
     "test:contacts": "node scripts/test-contacts.js"
   },

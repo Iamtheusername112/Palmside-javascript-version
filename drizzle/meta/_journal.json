@@ -1,19 +1,33 @@
 {
   "version": "5",
-  "dialect": "pg",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
       "version": "5",
-      "when": 1756114682232,
+      "when": 1703123456789,
       "tag": "0000_low_patch",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "5",
-      "when": 1756114682233,
+      "when": 1703123456790,
       "tag": "0001_add_contacts_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1703123456791,
+      "tag": "0002_add_response_templates_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1703123456792,
+      "tag": "0003_add_settings_table",
       "breakpoints": true
     }
   ]
