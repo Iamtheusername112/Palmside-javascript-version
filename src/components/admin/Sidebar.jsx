@@ -31,9 +31,7 @@ const navigation = [
   { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
   { name: 'Templates', href: '/admin/templates', icon: FileText },
   { name: 'Test Realtime', href: '/admin/contacts/test-realtime', icon: Zap },
-  { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Reports', href: '/admin/reports', icon: FileText },
-  { name: 'Messages', href: '/admin/messages', icon: MessageSquare },
   { name: 'Settings', href: '/admin/settings', icon: Settings },
 ]
 
