@@ -110,3 +110,66 @@ export const settings = pgTable('settings', {
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 })
+
+// New analytics tables for comprehensive reporting
+
+// Contact analytics table for detailed tracking
+export const contactAnalytics = pgTable('contact_analytics', {
+  id: serial('id').primaryKey(),
+  contactId: integer('contact_id').references(() => contacts.id, {
+    onDelete: 'cascade',
+  }),
+  priority: varchar('priority', { length: 20 }).default('medium'),
+  source: varchar('source', { length: 100 }).default('website'),
+  responseTimeMinutes: integer('response_time_minutes'),
+  conversionStatus: varchar('conversion_status', { length: 50 }).default(
+    'pending'
+  ),
+  followUpCount: integer('follow_up_count').default(0),
+  lastFollowUp: timestamp('last_follow_up'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Property performance analytics
+export const propertyAnalytics = pgTable('property_analytics', {
+  id: serial('id').primaryKey(),
+  propertyId: integer('property_id').references(() => properties.id, {
+    onDelete: 'cascade',
+  }),
+  views: integer('views').default(0),
+  inquiries: integer('inquiries').default(0),
+  conversionRate: decimal('conversion_rate', {
+    precision: 5,
+    scale: 2,
+  }).default('0.00'),
+  avgTimeOnPage: integer('avg_time_on_page').default(0),
+  bounceRate: decimal('bounce_rate', { precision: 5, scale: 2 }).default(
+    '0.00'
+  ),
+  lastUpdated: timestamp('last_updated').defaultNow(),
+})
+
+// System performance metrics
+export const systemMetrics = pgTable('system_metrics', {
+  id: serial('id').primaryKey(),
+  metricName: text('metric_name').notNull(),
+  metricValue: text('metric_value').notNull(),
+  category: varchar('category', { length: 50 }).default('performance'),
+  timestamp: timestamp('timestamp').defaultNow(),
+})
+
+// Monthly trends data
+export const monthlyTrends = pgTable('monthly_trends', {
+  id: serial('id').primaryKey(),
+  month: varchar('month', { length: 10 }).notNull(),
+  year: integer('year').notNull(),
+  contactsCount: integer('contacts_count').default(0),
+  propertiesCount: integer('properties_count').default(0),
+  responsesCount: integer('responses_count').default(0),
+  conversionRate: decimal('conversion_rate', {
+    precision: 5,
+    scale: 2,
+  }).default('0.00'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
