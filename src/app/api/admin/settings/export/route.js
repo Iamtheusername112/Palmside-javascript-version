@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { properties, contacts, templates } from '@/lib/db/schema'
+import { properties, contacts, responseTemplates } from '@/lib/db/schema'
 
 export async function POST(request) {
   try {
@@ -22,7 +22,7 @@ export async function POST(request) {
     }
 
     if (includeTemplates) {
-      const templatesData = await db.select().from(templates)
+      const templatesData = await db.select().from(responseTemplates)
       exportData.templates = templatesData
     }
 

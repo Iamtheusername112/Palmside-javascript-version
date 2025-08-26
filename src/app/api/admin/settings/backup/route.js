@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import { properties, contacts, templates } from '@/lib/db/schema'
+import { properties, contacts, responseTemplates } from '@/lib/db/schema'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 
@@ -17,13 +17,13 @@ export async function POST(request) {
       const [propertiesData, contactsData, templatesData] = await Promise.all([
         db.select().from(properties),
         db.select().from(contacts),
-        db.select().from(templates),
+        db.select().from(responseTemplates),
       ])
 
       backupData.database = {
         properties: propertiesData,
         contacts: contactsData,
-        templates: templatesData,
+        responseTemplates: templatesData,
         timestamp: new Date().toISOString(),
       }
     }

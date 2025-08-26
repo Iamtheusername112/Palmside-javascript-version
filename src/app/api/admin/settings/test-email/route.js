@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { sendEmail } from '@/lib/email-service'
+import { emailService } from '@/lib/email-service'
 
 export async function POST(request) {
   try {
@@ -7,10 +7,10 @@ export async function POST(request) {
     const { emailSettings } = body
 
     // Test email configuration
-    const testResult = await sendEmail({
+    const testResult = await emailService.sendEmail({
       to: emailSettings.fromEmail,
       subject: 'Email Configuration Test',
-      html: `
+      content: `
         <h2>Email Configuration Test</h2>
         <p>This is a test email to verify your SMTP settings are working correctly.</p>
         <p><strong>SMTP Host:</strong> ${emailSettings.smtpHost}</p>
@@ -20,14 +20,7 @@ export async function POST(request) {
         <hr>
         <p>If you received this email, your email configuration is working properly!</p>
       `,
-      smtpConfig: {
-        host: emailSettings.smtpHost,
-        port: parseInt(emailSettings.smtpPort),
-        username: emailSettings.smtpUsername,
-        password: emailSettings.smtpPassword,
-        fromEmail: emailSettings.fromEmail,
-        fromName: emailSettings.fromName,
-      },
+      from: emailSettings.fromEmail,
     })
 
     return NextResponse.json({
