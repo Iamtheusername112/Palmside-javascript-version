@@ -45,7 +45,7 @@ export default function Header() {
             className='flex items-center space-x-2 hover:opacity-80 transition-opacity ml-[-8px] md:ml-0'
           >
             <Image
-              src={'/logo/palmside-logo-ohne-mallorca.jpg'}
+              src={'/logo/palmside-logo-transparent.png'}
               alt='PalmSide logo'
               width={150}
               height={28}
